@@ -44,7 +44,7 @@ export default function Home() {
 
   async function onSocial(provider: "google" | "github" | "x") {
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: provider,
+      provider: provider as any,
       options: {
         redirectTo: `${location.origin}/auth/callback`,
       },
