@@ -1,9 +1,11 @@
 "use client";
 
-import { BarChart3, Download, Filter, Calendar } from "lucide-react";
+import { BarChart3, Download, Filter, Calendar, Plus, X, ScatterChart } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Calendar as RangeCalendar } from "@/components/ui/calendar";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import type { DateRange } from "react-day-picker";
 import { DataChart } from "@/components/dashboard/data-chart";
 import { createClient } from "@/utils/supabase/client";
@@ -13,11 +15,19 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 interface MetricDefinition {
   metric_name: string;
   category: string;
+  beautiful_name: string;
+  default_unit: string;
 }
 
 interface ChartData {
   bucket: string;
   value: number;
+}
+
+interface RawDataPoint {
+  timestamp: string;
+  value: number;
+  metric_name: string;
 }
 
 export default function DataPage() {
@@ -29,7 +39,9 @@ export default function DataPage() {
 
   const [metrics, setMetrics] = useState<MetricDefinition[]>([]);
   const [chartData, setChartData] = useState<ChartData[]>([]);
+  const [chartData2, setChartData2] = useState<ChartData[]>([]);
   const [tableData, setTableData] = useState<ChartData[]>([]);
+  const [rawDataPoints, setRawDataPoints] = useState<RawDataPoint[]>([]);
   const [summary, setSummary] = useState<{
     avg_val: number | null;
     min_val: number | null;
@@ -37,18 +49,23 @@ export default function DataPage() {
     total_count: number | null;
   } | null>(null);
   const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
+  const [compareMode, setCompareMode] = useState(false);
+  const [dayView, setDayView] = useState(false);
 
   const metric = searchParams.get('metric') || 'hr_resting';
+  const metric2 = searchParams.get('metric2') || '';
   const range = searchParams.get('range') || '30d';
   const customStartParam = searchParams.get('start');
   const customEndParam = searchParams.get('end');
   const type = searchParams.get('type') || 'line';
+  const dayViewParam = searchParams.get('dayView') === 'true';
+  const compareModeParam = searchParams.get('compare') === 'true';
 
   useEffect(() => {
     const fetchMetrics = async () => {
       const { data } = await supabase
         .from('metric_definitions')
-        .select('metric_name, category')
+        .select('metric_name, category, beautiful_name, default_unit')
         .order('category, metric_name');
       if (data) setMetrics(data);
     };
@@ -56,7 +73,15 @@ export default function DataPage() {
   }, [supabase]);
 
   useEffect(() => {
+    setCompareMode(compareModeParam);
+    setDayView(dayViewParam);
+  }, [compareModeParam, dayViewParam]);
+
+  useEffect(() => {
     const fetchData = async () => {
+      const user = await supabase.auth.getUser();
+      if (!user.data.user?.id) return;
+
       // Compute full-day boundaries in local time, then send date-only strings
       let endDate = new Date();
       let startDate = new Date();
@@ -98,22 +123,94 @@ export default function DataPage() {
       // and full timestamps for summary RPC which expects timestamptz
       const startDateStr = toYMDString(startDate);
       const endDateStr = toYMDString(endDate);
-      const startTs = startDate.toISOString(); // This is still okay for the summary function
-      const endTs = endDate.toISOString();     // as it expects a full timestamptz
+      const startTs = startDate.toISOString();
+      const endTs = endDate.toISOString();
 
       console.log('Requesting data for metric:', metric, 'range:', range, 'start date:', startDateStr, 'end date:', endDateStr);
 
-      const { data } = await supabase.rpc('get_metric_time_bucketed', {
-        user_id_input: (await supabase.auth.getUser()).data.user?.id,
-        metric_name_input: metric,
-        start_date_input: startDateStr,
-        end_date_input: endDateStr,
-        bucket_interval: 'day',
-      });
+      if (dayView) {
+        // Fetch raw data points directly from database for day view
+        const { data: rawData } = await supabase
+          .from('data_points')
+          .select(`
+            timestamp,
+            value_numeric,
+            metric_definitions!inner(metric_name, beautiful_name)
+          `)
+          .eq('user_id', user.data.user.id)
+          .eq('metric_definitions.metric_name', metric)
+          .gte('timestamp', startTs)
+          .lte('timestamp', endTs)
+          .order('timestamp', { ascending: true });
 
-      if (data) {
-        setChartData(data);
-        setTableData(data.slice().reverse()); // For descending order in table
+        if (rawData) {
+          const formattedRawData: RawDataPoint[] = rawData.map(point => ({
+            timestamp: point.timestamp,
+            value: point.value_numeric || 0,
+            metric_name: (point.metric_definitions as any).metric_name
+          }));
+          setRawDataPoints(formattedRawData);
+          
+          // Convert raw data to chart format
+          const chartFormat = formattedRawData.map(point => ({
+            bucket: point.timestamp,
+            value: point.value
+          }));
+          setChartData(chartFormat);
+          setTableData(chartFormat.slice().reverse());
+        }
+      } else {
+        // Use existing bucketed data approach
+        const { data } = await supabase.rpc('get_metric_time_bucketed', {
+          user_id_input: user.data.user.id,
+          metric_name_input: metric,
+          start_date_input: startDateStr,
+          end_date_input: endDateStr,
+          bucket_interval: 'day',
+        });
+
+        if (data) {
+          setChartData(data);
+          setTableData(data.slice().reverse());
+        }
+      }
+
+      // Fetch second metric data for comparison if in compare mode
+      if (compareMode && metric2) {
+        if (dayView) {
+          const { data: rawData2 } = await supabase
+            .from('data_points')
+            .select(`
+              timestamp,
+              value_numeric,
+              metric_definitions!inner(metric_name)
+            `)
+            .eq('user_id', user.data.user.id)
+            .eq('metric_definitions.metric_name', metric2)
+            .gte('timestamp', startTs)
+            .lte('timestamp', endTs)
+            .order('timestamp', { ascending: true });
+
+          if (rawData2) {
+            const chartFormat2 = rawData2.map(point => ({
+              bucket: point.timestamp,
+              value: point.value_numeric || 0
+            }));
+            setChartData2(chartFormat2);
+          }
+        } else {
+          const { data: data2 } = await supabase.rpc('get_metric_time_bucketed', {
+            user_id_input: user.data.user.id,
+            metric_name_input: metric2,
+            start_date_input: startDateStr,
+            end_date_input: endDateStr,
+            bucket_interval: 'day',
+          });
+
+          if (data2) {
+            setChartData2(data2);
+          }
+        }
       }
 
       // Fetch summary stats for the same period
@@ -133,9 +230,9 @@ export default function DataPage() {
     if (supabase && metric && (range !== 'custom' || (customStartParam && customEndParam))) {
       fetchData();
     }
-  }, [supabase, metric, range, customStartParam, customEndParam]);
+  }, [supabase, metric, metric2, range, customStartParam, customEndParam, dayView, compareMode]);
 
-  const handleFilterChange = (key: 'metric' | 'range' | 'type', value: string) => {
+  const handleFilterChange = (key: 'metric' | 'metric2' | 'range' | 'type', value: string) => {
     const current = new URLSearchParams(Array.from(searchParams.entries()));
     current.set(key, value);
     if (key === 'range' && value !== 'custom') {
@@ -149,16 +246,61 @@ export default function DataPage() {
     });
   };
 
+  const handleToggleChange = (key: 'compare' | 'dayView', value: boolean) => {
+    const current = new URLSearchParams(Array.from(searchParams.entries()));
+    if (value) {
+      current.set(key, 'true');
+    } else {
+      current.delete(key);
+      if (key === 'compare') {
+        current.delete('metric2');
+      }
+    }
+    const search = current.toString();
+    const query = search ? `?${search}` : "";
+    startTransition(() => {
+      router.push(`${pathname}${query}`);
+    });
+  };
+
+  const getMetricDisplayName = (metricName: string) => {
+    const metricDef = metrics.find(m => m.metric_name === metricName);
+    return metricDef?.beautiful_name || metricName;
+  };
+
   const formattedChartData = {
     labels: chartData.map(d => new Date(d.bucket)),
     datasets: [
       {
-        label: metrics.find(m => m.metric_name === metric)?.metric_name || metric,
+        label: getMetricDisplayName(metric),
         data: chartData.map(d => d.value),
         borderColor: 'rgba(54, 162, 235, 1)',
         backgroundColor: 'rgba(54, 162, 235, 0.5)',
       },
+      ...(compareMode && metric2 && chartData2.length > 0 ? [{
+        label: getMetricDisplayName(metric2),
+        data: chartData2.map(d => d.value),
+        borderColor: 'rgba(255, 99, 132, 1)',
+        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+      }] : []),
     ],
+  };
+
+  const scatterData = {
+    datasets: compareMode && metric2 && chartData.length > 0 && chartData2.length > 0 ? [
+      {
+        label: `${getMetricDisplayName(metric)} vs ${getMetricDisplayName(metric2)}`,
+        data: chartData.map((point) => {
+          const correspondingPoint = chartData2.find(p => p.bucket === point.bucket);
+          return correspondingPoint ? {
+            x: point.value,
+            y: correspondingPoint.value
+          } : null;
+        }).filter((point): point is { x: number; y: number } => point !== null),
+        borderColor: 'rgba(75, 192, 192, 1)',
+        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+      }
+    ] : [],
   };
   return (
     <div className="space-y-8">
@@ -184,23 +326,71 @@ export default function DataPage() {
 
       {/* Controls */}
       <div className="rounded-xl border border-white/20 bg-white/10 p-6 backdrop-blur-md">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div>
-            <label className="block text-sm font-medium text-white/90 mb-2">
-              Metric
-            </label>
-            <select 
-              value={metric}
-              onChange={(e) => handleFilterChange('metric', e.target.value)}
-              className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white backdrop-blur-md"
-              disabled={isPending}
-            >
-              <option value="">Select a metric</option>
-              {metrics.map(m => (
-                <option key={m.metric_name} value={m.metric_name}>{m.metric_name}</option>
-              ))}
-            </select>
+        <div className="space-y-6">
+          {/* Toggle Controls */}
+          <div className="flex flex-wrap gap-6">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="compare-mode"
+                checked={compareMode}
+                onCheckedChange={(checked) => handleToggleChange('compare', checked)}
+              />
+              <Label htmlFor="compare-mode" className="text-white/90">
+                Compare Metrics
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="day-view"
+                checked={dayView}
+                onCheckedChange={(checked) => handleToggleChange('dayView', checked)}
+              />
+              <Label htmlFor="day-view" className="text-white/90">
+                Day View (All Logs)
+              </Label>
+            </div>
           </div>
+
+          {/* Metric Selection */}
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div>
+              <label className="block text-sm font-medium text-white/90 mb-2">
+                Primary Metric
+              </label>
+              <select 
+                value={metric}
+                onChange={(e) => handleFilterChange('metric', e.target.value)}
+                className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white backdrop-blur-md"
+                disabled={isPending}
+              >
+                <option value="">Select a metric</option>
+                {metrics.map(m => (
+                  <option key={m.metric_name} value={m.metric_name}>
+                    {m.beautiful_name || m.metric_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {compareMode && (
+              <div>
+                <label className="block text-sm font-medium text-white/90 mb-2">
+                  Compare With
+                </label>
+                <select 
+                  value={metric2}
+                  onChange={(e) => handleFilterChange('metric2', e.target.value)}
+                  className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white backdrop-blur-md"
+                  disabled={isPending}
+                >
+                  <option value="">Select second metric</option>
+                  {metrics.filter(m => m.metric_name !== metric).map(m => (
+                    <option key={m.metric_name} value={m.metric_name}>
+                      {m.beautiful_name || m.metric_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           <div>
             <label className="block text-sm font-medium text-white/90 mb-2">
               Date Range
@@ -259,33 +449,50 @@ export default function DataPage() {
               )}
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-white/90 mb-2">
-              Chart Type
-            </label>
-            <select 
-              value={type}
-              onChange={(e) => handleFilterChange('type', e.target.value)}
-              className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white backdrop-blur-md"
-              disabled={isPending}
-            >
-              <option value="line">Line Chart</option>
-              <option value="bar">Bar Chart</option>
-            </select>
+            <div>
+              <label className="block text-sm font-medium text-white/90 mb-2">
+                Chart Type
+              </label>
+              <select 
+                value={type}
+                onChange={(e) => handleFilterChange('type', e.target.value)}
+                className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white backdrop-blur-md"
+                disabled={isPending}
+              >
+                <option value="line">Line Chart</option>
+                <option value="bar">Bar Chart</option>
+                {compareMode && metric2 && (
+                  <option value="scatter">Scatter Plot</option>
+                )}
+              </select>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Chart Area */}
       <div className="rounded-xl border border-white/20 bg-white/10 p-6 backdrop-blur-md">
-                {chartData.length > 0 ? (
-          <DataChart chartData={formattedChartData} chartType={type as 'line' | 'bar'} />
+        {chartData.length > 0 ? (
+          type === 'scatter' && compareMode && metric2 && scatterData.datasets.length > 0 ? (
+            <DataChart chartData={scatterData} chartType="scatter" />
+          ) : (
+            <DataChart chartData={formattedChartData} chartType={type as 'line' | 'bar'} />
+          )
         ) : (
           <div className="flex items-center justify-center h-96 text-white/50">
             <div className="text-center">
-              <BarChart3 className="h-16 w-16 mx-auto mb-4 text-white/30" />
+              {type === 'scatter' ? (
+                <ScatterChart className="h-16 w-16 mx-auto mb-4 text-white/30" />
+              ) : (
+                <BarChart3 className="h-16 w-16 mx-auto mb-4 text-white/30" />
+              )}
               <p className="text-lg font-medium">No data to display</p>
-              <p className="text-sm">Select a metric to view your data visualization</p>
+              <p className="text-sm">
+                {type === 'scatter' && compareMode 
+                  ? 'Select two metrics to view scatter plot comparison'
+                  : 'Select a metric to view your data visualization'
+                }
+              </p>
             </div>
           </div>
         )}
@@ -295,7 +502,9 @@ export default function DataPage() {
       <div className="rounded-xl border border-white/20 bg-white/10 p-6 backdrop-blur-md">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-white">Summary</h3>
-          <span className="text-xs text-white/60">{metric} • {range === 'custom' && customStartParam && customEndParam ? `${new Date(`${customStartParam}T00:00:00Z`).toLocaleDateString()} - ${new Date(`${customEndParam}T00:00:00Z`).toLocaleDateString()}` : `Last ${range}`}</span>
+          <span className="text-xs text-white/60">
+            {getMetricDisplayName(metric)} {dayView ? '(Day View)' : ''} • {range === 'custom' && customStartParam && customEndParam ? `${new Date(`${customStartParam}T00:00:00Z`).toLocaleDateString()} - ${new Date(`${customEndParam}T00:00:00Z`).toLocaleDateString()}` : `Last ${range}`}
+          </span>
         </div>
         {summary ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -341,10 +550,14 @@ export default function DataPage() {
                 {tableData.length > 0 ? (
                   tableData.map((row) => (
                     <tr key={row.bucket} className="border-b border-white/10">
-                      <td className="py-3 px-4 text-white/90">{new Date(row.bucket).toLocaleDateString()}</td>
-                      <td className="py-3 px-4 text-white/90">{metric}</td>
+                      <td className="py-3 px-4 text-white/90">
+                        {dayView ? new Date(row.bucket).toLocaleString() : new Date(row.bucket).toLocaleDateString()}
+                      </td>
+                      <td className="py-3 px-4 text-white/90">{getMetricDisplayName(metric)}</td>
                       <td className="py-3 px-4 text-white/90">{row.value.toFixed(2)}</td>
-                      <td className="py-3 px-4 text-white/90">N/A</td>
+                      <td className="py-3 px-4 text-white/90">
+                        {metrics.find(m => m.metric_name === metric)?.default_unit || 'N/A'}
+                      </td>
                     </tr>
                   ))
                 ) : (

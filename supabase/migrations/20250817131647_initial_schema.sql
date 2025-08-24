@@ -51,7 +51,9 @@ CREATE TABLE IF NOT EXISTS public.metric_definitions (
     id BIGSERIAL PRIMARY KEY,
     metric_name TEXT NOT NULL UNIQUE,
     category TEXT NOT NULL,
-    default_unit TEXT NULL
+    default_unit TEXT NULL,
+    beautiful_name TEXT NULL
+    
 );
 ALTER TABLE public.metric_definitions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Authenticated users can read metric definitions." ON public.metric_definitions FOR SELECT USING (auth.role() = 'authenticated');

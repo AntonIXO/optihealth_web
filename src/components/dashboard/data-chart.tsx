@@ -1,6 +1,6 @@
 "use client";
 
-import { Bar, Line } from 'react-chartjs-2';
+import { Bar, Line, Scatter } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -29,15 +29,15 @@ ChartJS.register(
 
 interface DataChartProps {
   chartData: {
-    labels: Date[];
+    labels?: Date[];
     datasets: {
       label: string;
-      data: number[];
+      data: number[] | { x: number; y: number }[];
       borderColor?: string;
       backgroundColor?: string;
     }[];
   };
-  chartType: 'line' | 'bar';
+  chartType: 'line' | 'bar' | 'scatter';
 }
 
 export function DataChart({ chartData, chartType }: DataChartProps) {
@@ -81,12 +81,38 @@ export function DataChart({ chartData, chartType }: DataChartProps) {
     },
   };
 
+  const scatterOptions = {
+    ...options,
+    scales: {
+      x: {
+        type: 'linear' as const,
+        position: 'bottom' as const,
+        ticks: {
+          color: 'rgba(255, 255, 255, 0.7)',
+        },
+        grid: {
+          color: 'rgba(255, 255, 255, 0.1)',
+        },
+      },
+      y: {
+        ticks: {
+          color: 'rgba(255, 255, 255, 0.7)',
+        },
+        grid: {
+          color: 'rgba(255, 255, 255, 0.1)',
+        },
+      },
+    },
+  };
+
   return (
     <div className="h-96 w-full">
       {chartType === 'line' ? (
         <Line options={options} data={chartData} />
-      ) : (
+      ) : chartType === 'bar' ? (
         <Bar options={options} data={chartData} />
+      ) : (
+        <Scatter options={scatterOptions} data={chartData} />
       )}
     </div>
   );
