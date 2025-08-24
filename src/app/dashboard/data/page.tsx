@@ -30,6 +30,12 @@ export default function DataPage() {
   const [metrics, setMetrics] = useState<MetricDefinition[]>([]);
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [tableData, setTableData] = useState<ChartData[]>([]);
+  const [summary, setSummary] = useState<{
+    avg_val: number | null;
+    min_val: number | null;
+    max_val: number | null;
+    total_count: number | null;
+  } | null>(null);
   const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
 
   const metric = searchParams.get('metric') || 'hr_resting';
@@ -51,39 +57,76 @@ export default function DataPage() {
 
   useEffect(() => {
     const fetchData = async () => {
+      // Compute full-day boundaries in local time, then send date-only strings
       let endDate = new Date();
       let startDate = new Date();
 
       if (range === 'custom' && customStartParam && customEndParam) {
+        // Already date-only strings from URL params
         startDate = new Date(`${customStartParam}T00:00:00.000Z`);
         endDate = new Date(`${customEndParam}T23:59:59.999Z`);
-      } else if (range.endsWith('d')) {
-        const rangeDays = parseInt(range.slice(0, -1), 10);
-        startDate = new Date();
-        startDate.setDate(endDate.getDate() - rangeDays);
-      } else if (range.endsWith('y')) {
-        const years = parseInt(range.slice(0, -1), 10);
-        const days = years * 365;
-        startDate = new Date();
-        startDate.setDate(endDate.getDate() - days);
       } else {
-        startDate = new Date();
-        startDate.setDate(endDate.getDate() - 30);
+        const now = new Date();
+        // End of current day (local)
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+        if (range.endsWith('d')) {
+          const rangeDays = parseInt(range.slice(0, -1), 10);
+          // Start of day 'rangeDays - 1' days ago (inclusive)
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          startDate.setDate(startDate.getDate() - rangeDays + 1);
+        } else if (range.endsWith('y')) {
+          const years = parseInt(range.slice(0, -1), 10);
+          // Start of day exactly N years ago
+          startDate = new Date(now.getFullYear() - years, now.getMonth(), now.getDate());
+        } else {
+          // Default 30 days
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          startDate.setDate(startDate.getDate() - 30 + 1);
+        }
       }
 
-      console.log('Requesting data for metric: ', metric, 'range: ', range, 'start date: ', startDate.toISOString(), 'end date: ', endDate.toISOString());
+      // Helper function to format a date as YYYY-MM-DD in its local timezone
+      const toYMDString = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      // Send date-only strings (YYYY-MM-DD) to backend for bucketed data,
+      // and full timestamps for summary RPC which expects timestamptz
+      const startDateStr = toYMDString(startDate);
+      const endDateStr = toYMDString(endDate);
+      const startTs = startDate.toISOString(); // This is still okay for the summary function
+      const endTs = endDate.toISOString();     // as it expects a full timestamptz
+
+      console.log('Requesting data for metric:', metric, 'range:', range, 'start date:', startDateStr, 'end date:', endDateStr);
 
       const { data } = await supabase.rpc('get_metric_time_bucketed', {
         user_id_input: (await supabase.auth.getUser()).data.user?.id,
         metric_name_input: metric,
-        start_date: startDate.toISOString(),
-        end_date: endDate.toISOString(),
+        start_date_input: startDateStr,
+        end_date_input: endDateStr,
         bucket_interval: 'day',
       });
 
       if (data) {
         setChartData(data);
         setTableData(data.slice().reverse()); // For descending order in table
+      }
+
+      // Fetch summary stats for the same period
+      const { data: summaryData } = await supabase.rpc('get_metric_summary_for_period', {
+        metric_name_input: metric,
+        start_date: startTs,
+        end_date: endTs,
+      });
+
+      if (Array.isArray(summaryData) && summaryData.length > 0) {
+        setSummary(summaryData[0]);
+      } else {
+        setSummary(null);
       }
     };
 
@@ -245,6 +288,36 @@ export default function DataPage() {
               <p className="text-sm">Select a metric to view your data visualization</p>
             </div>
           </div>
+        )}
+      </div>
+
+      {/* Summary */}
+      <div className="rounded-xl border border-white/20 bg-white/10 p-6 backdrop-blur-md">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">Summary</h3>
+          <span className="text-xs text-white/60">{metric} • {range === 'custom' && customStartParam && customEndParam ? `${new Date(`${customStartParam}T00:00:00Z`).toLocaleDateString()} - ${new Date(`${customEndParam}T00:00:00Z`).toLocaleDateString()}` : `Last ${range}`}</span>
+        </div>
+        {summary ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+              <div className="text-white/70 text-sm">Average</div>
+              <div className="text-white text-2xl font-semibold mt-1">{summary.avg_val !== null ? summary.avg_val.toFixed(2) : '—'}</div>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+              <div className="text-white/70 text-sm">Minimum</div>
+              <div className="text-white text-2xl font-semibold mt-1">{summary.min_val !== null ? summary.min_val.toFixed(2) : '—'}</div>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+              <div className="text-white/70 text-sm">Maximum</div>
+              <div className="text-white text-2xl font-semibold mt-1">{summary.max_val !== null ? summary.max_val.toFixed(2) : '—'}</div>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+              <div className="text-white/70 text-sm">Count</div>
+              <div className="text-white text-2xl font-semibold mt-1">{summary.total_count ?? '—'}</div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-white/60 text-sm">No summary available for the selected period.</div>
         )}
       </div>
 
