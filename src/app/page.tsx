@@ -5,10 +5,13 @@ import GlassAuthModal from "@/components/ui/auth-model";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/use-toast";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 export default function Home() {
   const router = useRouter();
   const supabase = createClient();
+  const [isAuthed, setIsAuthed] = useState<boolean>(false);
 
   async function onLogin(payload: { email: string; password: string }) {
     const { error } = await supabase.auth.signInWithPassword({
@@ -42,9 +45,23 @@ export default function Home() {
     router.refresh()
   }
 
+  useEffect(() => {
+    let unsub: (() => void) | undefined
+    supabase.auth.getUser().then(({ data }) => {
+      setIsAuthed(!!data.user)
+    })
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthed(!!session?.user)
+    })
+    unsub = () => sub.subscription.unsubscribe()
+    return () => {
+      if (unsub) unsub()
+    }
+  }, [supabase])
+
   async function onSocial(provider: "google" | "github" | "x") {
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: provider,
+      provider: provider as any,
       options: {
         redirectTo: `${location.origin}/auth/callback`,
       },
@@ -76,13 +93,22 @@ export default function Home() {
                 Discover patterns, track progress, and unlock personalized insights with AI-powered analysis.
               </p>
               <div className="mt-10 flex items-center justify-center gap-x-6">
-                <GlassAuthModal
-                  triggerLabel="Get Started"
-                  onLogin={onLogin}
-                  onSignup={onSignup}
-                  onSocial={onSocial}
-                  onResetPassword={onResetPassword}
-                />
+                {isAuthed ? (
+                  <Link
+                    href="/dashboard"
+                    className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-black shadow-sm backdrop-blur-md transition hover:bg-white/15 active:scale-[0.98] dark:text-white dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10 light:border-blue-300/50 light:bg-blue-100/30 light:text-blue-900 light:hover:bg-blue-100/50"
+                  >
+                    To Dashboard
+                  </Link>
+                ) : (
+                  <GlassAuthModal
+                    triggerLabel="Get Started"
+                    onLogin={onLogin}
+                    onSignup={onSignup}
+                    onSocial={onSocial}
+                    onResetPassword={onResetPassword}
+                  />
+                )}
                 <a
                   href="#features"
                   className="text-sm font-semibold leading-6 text-white hover:text-white/80 transition-colors"
@@ -195,13 +221,22 @@ export default function Home() {
             Join thousands of users who are already transforming their health data into actionable insights.
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
-            <GlassAuthModal
-              triggerLabel="Start Your Journey"
-              onLogin={onLogin}
-              onSignup={onSignup}
-              onSocial={onSocial}
-              onResetPassword={onResetPassword}
-            />
+            {isAuthed ? (
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-black shadow-sm backdrop-blur-md transition hover:bg-white/15 active:scale-[0.98] dark:text-white dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10 light:border-blue-300/50 light:bg-blue-100/30 light:text-blue-900 light:hover:bg-blue-100/50"
+              >
+                To Dashboard
+              </Link>
+            ) : (
+              <GlassAuthModal
+                triggerLabel="Start Your Journey"
+                onLogin={onLogin}
+                onSignup={onSignup}
+                onSocial={onSocial}
+                onResetPassword={onResetPassword}
+              />
+            )}
           </div>
         </div>
       </div>
