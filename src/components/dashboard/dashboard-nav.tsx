@@ -11,7 +11,8 @@ import {
   Settings, 
   LogOut,
   Menu,
-  X
+  X,
+  Target
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -30,6 +31,7 @@ export default function DashboardNav({ user }: DashboardNavProps) {
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Data", href: "/dashboard/data", icon: BarChart3 },
     { name: "Insights", href: "/dashboard/insights", icon: Brain },
+    { name: "Goals", href: "/dashboard/goals", icon: Target },
     { name: "Settings", href: "/dashboard/settings", icon: Settings },
   ];
 
