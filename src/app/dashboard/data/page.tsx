@@ -257,6 +257,10 @@ export default function DataPage() {
     if (key === 'range' && value !== 'custom') {
       current.delete('start');
       current.delete('end');
+      // If a multi-day range is selected, disable dayView
+      if (value.endsWith('d') || value.endsWith('y')) {
+        current.delete('dayView');
+      }
     }
     const search = current.toString();
     const query = search ? `?${search}` : "";
@@ -287,23 +291,47 @@ export default function DataPage() {
     return metricDef?.beautiful_name || metricName;
   };
 
-  const formattedChartData = {
-    labels: chartData.map(d => new Date(d.bucket)),
-    datasets: [
-      {
+  const formattedChartData = (
+    () => {
+      const baseDataset = {
         label: getMetricDisplayName(metric),
-        data: chartData.map(d => d.value),
         borderColor: 'rgba(54, 162, 235, 1)',
-        backgroundColor: 'rgba(54, 162, 235, 0.5)',
-      },
-      ...(compareMode && metric2 && chartData2.length > 0 ? [{
-        label: getMetricDisplayName(metric2),
-        data: chartData2.map(d => d.value),
-        borderColor: 'rgba(255, 99, 132, 1)',
-        backgroundColor: 'rgba(255, 99, 132, 0.5)',
-      }] : []),
-    ],
-  };
+        backgroundColor: 'rgba(54, 162, 235, 0.5)'
+      } as const;
+
+      // Scatter (non-compare): use time-based points for both day and multi-day
+      if (type === 'scatter' && !(compareMode && metric2)) {
+        return {
+          datasets: [
+            {
+              ...baseDataset,
+              data: chartData.map(d => ({ x: new Date(d.bucket).getTime(), y: d.value })),
+            }
+          ]
+        };
+      }
+
+      // line/bar default, including multi-day and dayView non-scatter
+      const labels = chartData.map(d => new Date(d.bucket));
+      const datasets = [
+        {
+          ...baseDataset,
+          data: chartData.map(d => d.value),
+        } as const,
+      ];
+
+      if (compareMode && metric2 && chartData2.length > 0) {
+        datasets.push({
+          label: getMetricDisplayName(metric2),
+          data: chartData2.map(d => d.value),
+          borderColor: 'rgba(255, 99, 132, 1)',
+          backgroundColor: 'rgba(255, 99, 132, 0.5)'
+        } as any);
+      }
+
+      return { labels, datasets };
+    }
+  )();
 
   const scatterData = {
     datasets: compareMode && metric2 && chartData.length > 0 && chartData2.length > 0 ? [
@@ -480,7 +508,7 @@ export default function DataPage() {
               >
                 <option value="line">Line Chart</option>
                 <option value="bar">Bar Chart</option>
-                {compareMode && metric2 && (
+                {( (compareMode && metric2) || dayView ) && (
                   <option value="scatter">Scatter Plot</option>
                 )}
               </select>
@@ -493,9 +521,9 @@ export default function DataPage() {
       <div className="rounded-xl border border-white/20 bg-white/10 p-6 backdrop-blur-md">
         {chartData.length > 0 ? (
           type === 'scatter' && compareMode && metric2 && scatterData.datasets.length > 0 ? (
-            <DataChart chartData={scatterData} chartType="scatter" />
+            <DataChart chartData={scatterData} chartType="scatter" scatterXScale="linear" />
           ) : (
-            <DataChart chartData={formattedChartData} chartType={type as 'line' | 'bar'} dayView={dayView} minTime={minTime} maxTime={maxTime} />
+            <DataChart chartData={formattedChartData} chartType={type as 'line' | 'bar' | 'scatter'} dayView={dayView} minTime={minTime} maxTime={maxTime} scatterXScale={type === 'scatter' ? 'time' : undefined} />
           )
         ) : (
           <div className="flex items-center justify-center h-96 text-white/50">
