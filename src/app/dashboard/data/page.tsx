@@ -51,6 +51,8 @@ export default function DataPage() {
   const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
   const [compareMode, setCompareMode] = useState(false);
   const [dayView, setDayView] = useState(false);
+  const [minTime, setMinTime] = useState<number | undefined>();
+  const [maxTime, setMaxTime] = useState<number | undefined>();
 
   const metric = searchParams.get('metric') || 'hr_resting';
   const metric2 = searchParams.get('metric2') || '';
@@ -129,6 +131,10 @@ export default function DataPage() {
       console.log('Requesting data for metric:', metric, 'range:', range, 'start date:', startDateStr, 'end date:', endDateStr);
 
       if (dayView) {
+        const dayViewStartDate = new Date(endDate);
+        dayViewStartDate.setHours(0, 0, 0, 0);
+        const dayViewStartTs = dayViewStartDate.toISOString();
+
         // Fetch raw data points directly from database for day view
         const { data: rawData } = await supabase
           .from('data_points')
@@ -139,7 +145,7 @@ export default function DataPage() {
           `)
           .eq('user_id', user.data.user.id)
           .eq('metric_definitions.metric_name', metric)
-          .gte('timestamp', startTs)
+          .gte('timestamp', dayViewStartTs)
           .lte('timestamp', endTs)
           .order('timestamp', { ascending: true });
 
@@ -158,8 +164,21 @@ export default function DataPage() {
           }));
           setChartData(chartFormat);
           setTableData(chartFormat.slice().reverse());
+
+          if (chartFormat.length > 0) {
+            const timestamps = chartFormat.map(d => new Date(d.bucket).getTime());
+            const min = Math.min(...timestamps);
+            const max = Math.max(...timestamps);
+            setMinTime(min);
+            setMaxTime(max);
+          } else {
+            setMinTime(undefined);
+            setMaxTime(undefined);
+          }
         }
       } else {
+        setMinTime(undefined);
+        setMaxTime(undefined);
         // Use existing bucketed data approach
         const { data } = await supabase.rpc('get_metric_time_bucketed', {
           user_id_input: user.data.user.id,
@@ -476,7 +495,7 @@ export default function DataPage() {
           type === 'scatter' && compareMode && metric2 && scatterData.datasets.length > 0 ? (
             <DataChart chartData={scatterData} chartType="scatter" />
           ) : (
-            <DataChart chartData={formattedChartData} chartType={type as 'line' | 'bar'} />
+            <DataChart chartData={formattedChartData} chartType={type as 'line' | 'bar'} dayView={dayView} minTime={minTime} maxTime={maxTime} />
           )
         ) : (
           <div className="flex items-center justify-center h-96 text-white/50">

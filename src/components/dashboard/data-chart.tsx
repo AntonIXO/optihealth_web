@@ -38,9 +38,12 @@ interface DataChartProps {
     }[];
   };
   chartType: 'line' | 'bar' | 'scatter';
+  dayView?: boolean;
+  minTime?: number;
+  maxTime?: number;
 }
 
-export function DataChart({ chartData, chartType }: DataChartProps) {
+export function DataChart({ chartData, chartType, minTime, maxTime }: DataChartProps) {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
@@ -60,8 +63,13 @@ export function DataChart({ chartData, chartType }: DataChartProps) {
     scales: {
       x: {
         type: 'time' as const,
-                time: {
-          unit: 'day' as const,
+        min: minTime,
+        max: maxTime,
+        time: {
+          unit: 'hour' as const,
+          displayFormats: {
+            hour: 'HH:mm',
+          },
         },
         ticks: {
           color: 'rgba(255, 255, 255, 0.7)',
