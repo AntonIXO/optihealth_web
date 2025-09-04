@@ -98,18 +98,20 @@ export default function InsightsPage() {
 
     try {
       // Queue insight generation job
-      await supabase
+      // Queue insight generation job - insert and ignore duplicate pending
+      const { error } = await supabase
         .from('analysis_jobs')
-        .upsert({
-          user_id: user.user.id,
-          status: 'pending'
-        }, {
-          onConflict: 'user_id',
-          ignoreDuplicates: false
-        });
+        .insert({ user_id: user.user.id, status: 'pending' });
 
-      // Generate sample insights based on existing data
-      await generateSampleInsights(user.user.id);
+      if (error) {
+        // Postgres unique violation => an existing pending job already exists. Treat as success.
+        // PostgREST typically maps this to 409; error.code might be '23505'
+        const code = (error as any).code;
+        const status = (error as any).status;
+        if (code !== '23505' && status !== 409) {
+          throw error;
+        }
+      }
       
       // Refresh insights
       await fetchInsights();
