@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { Activity, Brain } from "lucide-react";
+import Link from "next/link";
 import { DailyTimeline } from "@/components/dashboard/daily-timeline";
 
 export default async function DashboardPage() {
@@ -28,10 +29,10 @@ export default async function DashboardPage() {
       <div className="rounded-xl border border-white/20 bg-white/10 p-6 backdrop-blur-md">
         <h2 className="text-xl font-semibold text-white mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <button className="flex items-center justify-center gap-2 rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-white transition hover:bg-white/20">
+          <Link href="/dashboard/data" className="flex items-center justify-center gap-2 rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-white transition hover:bg-white/20">
             <Activity className="h-5 w-5" />
             Log Activity
-          </button>
+          </Link>
           <button className="flex items-center justify-center gap-2 rounded-lg border border-white/20 bg-white/10 px-4 py-3 text-white transition hover:bg-white/20">
             <Brain className="h-5 w-5" />
             Add Journal Entry

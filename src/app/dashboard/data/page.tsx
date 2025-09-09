@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import type { DateRange } from "react-day-picker";
 import { DataChart } from "@/components/dashboard/data-chart";
+import { DataLogger } from "@/components/dashboard/data-logger";
 import { createClient } from "@/utils/supabase/client";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
@@ -369,6 +370,12 @@ export default function DataPage() {
             Export
           </button>
         </div>
+      </div>
+
+      {/* Quick Log */}
+      <div className="rounded-xl border border-white/20 bg-white/10 p-6 backdrop-blur-md">
+        <h2 className="text-xl font-semibold text-white mb-4">Quick Log</h2>
+        <DataLogger />
       </div>
 
       {/* Controls */}
