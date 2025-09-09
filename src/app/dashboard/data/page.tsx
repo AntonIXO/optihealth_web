@@ -8,6 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import type { DateRange } from "react-day-picker";
 import { DataChart } from "@/components/dashboard/data-chart";
+import { DataLogger } from "@/components/dashboard/data-logger";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { createClient } from "@/utils/supabase/client";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
@@ -51,6 +53,8 @@ export default function DataPage() {
   const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
   const [compareMode, setCompareMode] = useState(false);
   const [dayView, setDayView] = useState(false);
+  const [minTime, setMinTime] = useState<number | undefined>();
+  const [maxTime, setMaxTime] = useState<number | undefined>();
 
   const metric = searchParams.get('metric') || 'hr_resting';
   const metric2 = searchParams.get('metric2') || '';
@@ -129,6 +133,10 @@ export default function DataPage() {
       console.log('Requesting data for metric:', metric, 'range:', range, 'start date:', startDateStr, 'end date:', endDateStr);
 
       if (dayView) {
+        const dayViewStartDate = new Date(endDate);
+        dayViewStartDate.setHours(0, 0, 0, 0);
+        const dayViewStartTs = dayViewStartDate.toISOString();
+
         // Fetch raw data points directly from database for day view
         const { data: rawData } = await supabase
           .from('data_points')
@@ -139,7 +147,7 @@ export default function DataPage() {
           `)
           .eq('user_id', user.data.user.id)
           .eq('metric_definitions.metric_name', metric)
-          .gte('timestamp', startTs)
+          .gte('timestamp', dayViewStartTs)
           .lte('timestamp', endTs)
           .order('timestamp', { ascending: true });
 
@@ -158,8 +166,21 @@ export default function DataPage() {
           }));
           setChartData(chartFormat);
           setTableData(chartFormat.slice().reverse());
+
+          if (chartFormat.length > 0) {
+            const timestamps = chartFormat.map(d => new Date(d.bucket).getTime());
+            const min = Math.min(...timestamps);
+            const max = Math.max(...timestamps);
+            setMinTime(min);
+            setMaxTime(max);
+          } else {
+            setMinTime(undefined);
+            setMaxTime(undefined);
+          }
         }
       } else {
+        setMinTime(undefined);
+        setMaxTime(undefined);
         // Use existing bucketed data approach
         const { data } = await supabase.rpc('get_metric_time_bucketed', {
           user_id_input: user.data.user.id,
@@ -238,6 +259,10 @@ export default function DataPage() {
     if (key === 'range' && value !== 'custom') {
       current.delete('start');
       current.delete('end');
+      // If a multi-day range is selected, disable dayView
+      if (value.endsWith('d') || value.endsWith('y')) {
+        current.delete('dayView');
+      }
     }
     const search = current.toString();
     const query = search ? `?${search}` : "";
@@ -268,23 +293,47 @@ export default function DataPage() {
     return metricDef?.beautiful_name || metricName;
   };
 
-  const formattedChartData = {
-    labels: chartData.map(d => new Date(d.bucket)),
-    datasets: [
-      {
+  const formattedChartData = (
+    () => {
+      const baseDataset = {
         label: getMetricDisplayName(metric),
-        data: chartData.map(d => d.value),
         borderColor: 'rgba(54, 162, 235, 1)',
-        backgroundColor: 'rgba(54, 162, 235, 0.5)',
-      },
-      ...(compareMode && metric2 && chartData2.length > 0 ? [{
-        label: getMetricDisplayName(metric2),
-        data: chartData2.map(d => d.value),
-        borderColor: 'rgba(255, 99, 132, 1)',
-        backgroundColor: 'rgba(255, 99, 132, 0.5)',
-      }] : []),
-    ],
-  };
+        backgroundColor: 'rgba(54, 162, 235, 0.5)'
+      } as const;
+
+      // Scatter (non-compare): use time-based points for both day and multi-day
+      if (type === 'scatter' && !(compareMode && metric2)) {
+        return {
+          datasets: [
+            {
+              ...baseDataset,
+              data: chartData.map(d => ({ x: new Date(d.bucket).getTime(), y: d.value })),
+            }
+          ]
+        };
+      }
+
+      // line/bar default, including multi-day and dayView non-scatter
+      const labels = chartData.map(d => new Date(d.bucket));
+      const datasets = [
+        {
+          ...baseDataset,
+          data: chartData.map(d => d.value),
+        } as const,
+      ];
+
+      if (compareMode && metric2 && chartData2.length > 0) {
+        datasets.push({
+          label: getMetricDisplayName(metric2),
+          data: chartData2.map(d => d.value),
+          borderColor: 'rgba(255, 99, 132, 1)',
+          backgroundColor: 'rgba(255, 99, 132, 0.5)'
+        } as any);
+      }
+
+      return { labels, datasets };
+    }
+  )();
 
   const scatterData = {
     datasets: compareMode && metric2 && chartData.length > 0 && chartData2.length > 0 ? [
@@ -313,6 +362,23 @@ export default function DataPage() {
           </p>
         </div>
         <div className="flex gap-3">
+          <Dialog>
+            <DialogTrigger asChild>
+              <button className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-white transition hover:bg-white/20">
+                <Plus className="h-4 w-4" />
+                Quick Log
+              </button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg border-white/20 bg-white/10 backdrop-blur-md">
+              <DialogHeader>
+                <DialogTitle className="text-white">Quick Log</DialogTitle>
+                <DialogDescription className="text-white/70">
+                  Quickly add a new data point
+                </DialogDescription>
+              </DialogHeader>
+              <DataLogger className="bg-white/5 border border-white/10" title="Log a new data point" />
+            </DialogContent>
+          </Dialog>
           <button className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-white transition hover:bg-white/20">
             <Filter className="h-4 w-4" />
             Filters
@@ -461,7 +527,7 @@ export default function DataPage() {
               >
                 <option value="line">Line Chart</option>
                 <option value="bar">Bar Chart</option>
-                {compareMode && metric2 && (
+                {( (compareMode && metric2) || dayView ) && (
                   <option value="scatter">Scatter Plot</option>
                 )}
               </select>
@@ -474,9 +540,9 @@ export default function DataPage() {
       <div className="rounded-xl border border-white/20 bg-white/10 p-6 backdrop-blur-md">
         {chartData.length > 0 ? (
           type === 'scatter' && compareMode && metric2 && scatterData.datasets.length > 0 ? (
-            <DataChart chartData={scatterData} chartType="scatter" />
+            <DataChart chartData={scatterData} chartType="scatter" scatterXScale="linear" />
           ) : (
-            <DataChart chartData={formattedChartData} chartType={type as 'line' | 'bar'} />
+            <DataChart chartData={formattedChartData} chartType={type as 'line' | 'bar' | 'scatter'} dayView={dayView} minTime={minTime} maxTime={maxTime} scatterXScale={type === 'scatter' ? 'time' : undefined} />
           )
         ) : (
           <div className="flex items-center justify-center h-96 text-white/50">
