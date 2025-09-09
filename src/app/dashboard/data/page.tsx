@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import type { DateRange } from "react-day-picker";
 import { DataChart } from "@/components/dashboard/data-chart";
 import { DataLogger } from "@/components/dashboard/data-logger";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { createClient } from "@/utils/supabase/client";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
@@ -361,6 +362,23 @@ export default function DataPage() {
           </p>
         </div>
         <div className="flex gap-3">
+          <Dialog>
+            <DialogTrigger asChild>
+              <button className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-white transition hover:bg-white/20">
+                <Plus className="h-4 w-4" />
+                Quick Log
+              </button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg border-white/20 bg-white/10 backdrop-blur-md">
+              <DialogHeader>
+                <DialogTitle className="text-white">Quick Log</DialogTitle>
+                <DialogDescription className="text-white/70">
+                  Quickly add a new data point
+                </DialogDescription>
+              </DialogHeader>
+              <DataLogger className="bg-white/5 border border-white/10" title="Log a new data point" />
+            </DialogContent>
+          </Dialog>
           <button className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-white transition hover:bg-white/20">
             <Filter className="h-4 w-4" />
             Filters
@@ -370,12 +388,6 @@ export default function DataPage() {
             Export
           </button>
         </div>
-      </div>
-
-      {/* Quick Log */}
-      <div className="rounded-xl border border-white/20 bg-white/10 p-6 backdrop-blur-md">
-        <h2 className="text-xl font-semibold text-white mb-4">Quick Log</h2>
-        <DataLogger />
       </div>
 
       {/* Controls */}

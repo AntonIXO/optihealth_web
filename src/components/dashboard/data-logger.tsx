@@ -25,6 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClient } from "@/utils/supabase/client";
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
   metric_id: z.string().min(1, { message: "Please select a metric." }),
@@ -40,7 +41,12 @@ interface MetricDefinition {
   beautiful_name: string;
 }
 
-export function DataLogger() {
+type DataLoggerProps = {
+  className?: string;
+  title?: string;
+};
+
+export function DataLogger({ className, title = "Log a new data point" }: DataLoggerProps) {
   const supabase = createClient();
   const [metrics, setMetrics] = useState<MetricDefinition[]>([]);
   const { toast } = useToast();
@@ -114,9 +120,9 @@ export function DataLogger() {
   }
 
   return (
-    <Card>
+    <Card className={cn(className)}>
       <CardHeader>
-        <CardTitle>Log a new data point</CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
