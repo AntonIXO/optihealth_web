@@ -9,14 +9,15 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 
-type Product = { id: number; product_name: string; serving_size_unit: string }
+type Product = { id: number; product_name: string; serving_size_unit: string; user_id?: string }
 
-const fetcher = async (_key: string, q: string): Promise<Product[]> => {
+const fetcher = async (_key: string, q: string, uid: string | null): Promise<Product[]> => {
   const supabase = createClient()
   const { data, error } = await supabase
     .from("supplement_products")
     .select("id, product_name, serving_size_unit")
     .ilike("product_name", `%${q}%`)
+    .eq("user_id", uid as any)
     .order("product_name", { ascending: true })
     .limit(10)
   if (error) throw error
@@ -50,6 +51,11 @@ export function SupplementLogger({
   const [timestamp, setTimestamp] = useState<string>(() => new Date().toISOString().slice(0, 16)) // yyyy-MM-ddTHH:mm
   const [notes, setNotes] = useState<string>("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null))
+  }, [supabase])
 
   useEffect(() => {
     if (editEntry) {
@@ -66,8 +72,8 @@ export function SupplementLogger({
   }, [editEntry])
 
   const { data: suggestions, isLoading } = useSWR<Product[]>(
-    nameQuery ? ["supplement-search", nameQuery] : null,
-    ([, q]) => fetcher("supplement-search", q as string)
+    nameQuery && userId ? ["supplement-search", nameQuery, userId] : null,
+    ([, q, uid]) => fetcher("supplement-search", q as string, uid as string | null)
   )
 
   const canSubmit = !!productId && servings !== "" && timestamp
