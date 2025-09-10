@@ -44,12 +44,3 @@ INSERT INTO public.metric_definitions (metric_name, category, default_unit, beau
 ('blood_pressure_diastolic', 'Blood pressure', 'mmHg', 'Diastolic Blood Pressure')
 ON CONFLICT (metric_name) DO UPDATE SET
   beautiful_name = EXCLUDED.beautiful_name;
-
--- This statement inserts supplement definitions into the supplement_definitions table.
--- The ON CONFLICT clause prevents errors if a supplement_name already exists.
-INSERT INTO public.supplement_definitions (supplement_name, category) VALUES
-('Vitamin D3', 'Vitamin'),
-('Magnesium Glycinate', 'Mineral'),
-('Ashwagandha', 'Adaptogen'),
-('Creatine Monohydrate', 'Performance')
-ON CONFLICT (supplement_name) DO NOTHING;
