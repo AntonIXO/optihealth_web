@@ -14,11 +14,11 @@ const PAGE_SIZE = 20
 type HistoryRow = {
   id: number
   timestamp: string
-  amount: number
-  unit: string
+  servings: number
   notes: string | null
-  supplement_id: number
-  supplement_name: string
+  product_id: number
+  product_name: string
+  serving_size_unit: string
 }
 
 const fetchHistory = async (page: number, search: string): Promise<{ rows: HistoryRow[]; hasMore: boolean }> => {
@@ -26,13 +26,13 @@ const fetchHistory = async (page: number, search: string): Promise<{ rows: Histo
 
   let filterIds: number[] | null = null
   if (search) {
-    const { data: defs, error: defErr } = await supabase
-      .from("supplement_definitions")
+    const { data: prods, error: prodErr } = await supabase
+      .from("supplement_products")
       .select("id")
-      .ilike("supplement_name", `%${search}%`)
+      .ilike("product_name", `%${search}%`)
       .limit(50)
-    if (defErr) throw defErr
-    filterIds = (defs ?? []).map((d: { id: number }) => d.id)
+    if (prodErr) throw prodErr
+    filterIds = (prods ?? []).map((d: { id: number }) => d.id)
     if (filterIds.length === 0) {
       return { rows: [], hasMore: false }
     }
@@ -41,13 +41,13 @@ const fetchHistory = async (page: number, search: string): Promise<{ rows: Histo
   let query = supabase
     .from("supplement_logs")
     .select(
-      `id, timestamp, amount, unit, notes, supplement_id,
-       supplement_definitions:supplement_id(id, supplement_name)`
+      `id, timestamp, servings, notes, product_id,
+       supplement_products:product_id(id, product_name, serving_size_unit)`
     )
     .order("timestamp", { ascending: false })
 
   if (filterIds) {
-    query = query.in("supplement_id", filterIds)
+    query = query.in("product_id", filterIds)
   }
 
   const from = (page - 1) * PAGE_SIZE
@@ -58,11 +58,11 @@ const fetchHistory = async (page: number, search: string): Promise<{ rows: Histo
   const rows: HistoryRow[] = (data ?? []).map((r: any): HistoryRow => ({
     id: r.id,
     timestamp: r.timestamp,
-    amount: r.amount,
-    unit: r.unit,
+    servings: r.servings,
     notes: r.notes,
-    supplement_id: r.supplement_id,
-    supplement_name: r.supplement_definitions?.supplement_name ?? "",
+    product_id: r.product_id,
+    product_name: r.supplement_products?.product_name ?? "",
+    serving_size_unit: r.supplement_products?.serving_size_unit ?? "pill",
   }))
 
   return { rows, hasMore: (data ?? []).length === PAGE_SIZE }
@@ -73,10 +73,9 @@ export function SupplementHistory({
 }: {
   onEdit?: (entry: {
     id: number
-    supplement_id: number
-    supplement_name: string
-    amount: number
-    unit: string
+    product_id: number
+    product_name: string
+    servings: number
     timestamp: string
     notes?: string | null
   }) => void
@@ -122,7 +121,7 @@ export function SupplementHistory({
 
       <div className="mb-4">
         <Input
-          placeholder="Filter by supplement name"
+          placeholder="Filter by product name"
           value={search}
           onChange={(e) => {
             setPage(1)
@@ -143,8 +142,8 @@ export function SupplementHistory({
           >
             <div className="space-y-1">
               <div className="text-sm text-foreground">
-                {new Date(r.timestamp).toLocaleString()} — Logged {r.amount}
-                {r.unit ? r.unit : ""} of {r.supplement_name}
+                {new Date(r.timestamp).toLocaleString()} — Logged {r.servings} {r.serving_size_unit}
+                {r.servings !== 1 ? "s" : ""} of {r.product_name}
               </div>
               {r.notes && (
                 <div className="text-xs text-muted-foreground">{r.notes}</div>
@@ -157,10 +156,9 @@ export function SupplementHistory({
                 onClick={() =>
                   onEdit?.({
                     id: r.id,
-                    supplement_id: r.supplement_id,
-                    supplement_name: r.supplement_name,
-                    amount: r.amount,
-                    unit: r.unit,
+                    product_id: r.product_id,
+                    product_name: r.product_name,
+                    servings: r.servings,
                     timestamp: r.timestamp,
                     notes: r.notes,
                   })

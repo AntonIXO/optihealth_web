@@ -25,9 +25,9 @@ function rangeToDates(range: RangeKey) {
 }
 
 type StatRow = {
-  supplement_name: string
-  unit: string
-  total: number
+  product_name: string
+  serving_size_unit: string
+  totalServings: number
   daysTaken: number
   totalDays: number
   currentStreak: number
@@ -41,32 +41,32 @@ async function fetchStats(range: RangeKey): Promise<StatRow[]> {
   const { data, error } = await supabase
     .from("supplement_logs")
     .select(
-      `timestamp, amount, unit, supplement_id, supplement_definitions:supplement_id(id, supplement_name)`
+      `timestamp, servings, product_id, supplement_products:product_id(id, product_name, serving_size_unit)`
     )
     .gte("timestamp", start.toISOString())
     .lte("timestamp", end.toISOString())
   if (error) throw error
 
-  const bySupp: Record<string, { name: string; unit: string; totals: number; days: Set<string>; dates: string[] }> = {}
+  const byProd: Record<string, { name: string; unit: string; totals: number; days: Set<string>; dates: string[] }> = {}
 
   for (const r of data ?? []) {
-    const name = r.supplement_definitions?.supplement_name ?? ""
-    const unit = r.unit as string
+    const name = r.supplement_products?.product_name ?? ""
+    const unit = (r.supplement_products?.serving_size_unit as string) ?? "pill"
     const key = `${name}__${unit}`
     const dayKey = new Date(r.timestamp).toISOString().slice(0, 10)
-    if (!bySupp[key]) {
-      bySupp[key] = { name, unit, totals: 0, days: new Set(), dates: [] }
+    if (!byProd[key]) {
+      byProd[key] = { name, unit, totals: 0, days: new Set(), dates: [] }
     }
-    bySupp[key].totals += Number(r.amount) || 0
-    bySupp[key].days.add(dayKey)
-    bySupp[key].dates.push(dayKey)
+    byProd[key].totals += Number(r.servings) || 0
+    byProd[key].days.add(dayKey)
+    byProd[key].dates.push(dayKey)
   }
 
   const totalDays = Math.ceil((rangeToDates(range).end.getTime() - rangeToDates(range).start.getTime()) / (24 * 3600 * 1000))
 
   // Compute current streak per supplement based on consecutive days up to today
   const todayStr = new Date().toISOString().slice(0, 10)
-  const results: StatRow[] = Object.values(bySupp).map((v) => {
+  const results: StatRow[] = Object.values(byProd).map((v) => {
     const uniqueDays = Array.from(v.days).sort()
     let streak = 0
     // Walk backward from today
@@ -83,9 +83,9 @@ async function fetchStats(range: RangeKey): Promise<StatRow[]> {
     }
 
     return {
-      supplement_name: v.name,
-      unit: v.unit,
-      total: v.totals,
+      product_name: v.name,
+      serving_size_unit: v.unit,
+      totalServings: v.totals,
       daysTaken: uniqueDays.length,
       totalDays,
       currentStreak: streak,
@@ -126,9 +126,9 @@ export function SupplementStats() {
         {data?.map((s: StatRow) => {
           const percent = s.totalDays ? Math.round((s.daysTaken / s.totalDays) * 100) : 0
           return (
-            <div key={`${s.supplement_name}-${s.unit}`} className="border rounded-md p-3">
+            <div key={`${s.product_name}-${s.serving_size_unit}`} className="border rounded-md p-3">
               <div className="flex items-center justify-between">
-                <div className="font-medium">{s.supplement_name}</div>
+                <div className="font-medium">{s.product_name}</div>
                 <div className="flex items-center gap-1 text-orange-600 dark:text-orange-400">
                   <Flame className="h-4 w-4" />
                   <span className="text-sm">{s.currentStreak} day streak</span>
@@ -145,7 +145,7 @@ export function SupplementStats() {
                   Taken {s.daysTaken} of {s.totalDays} days
                 </div>
               </div>
-              <div className="mt-2 text-sm">Total this period: {s.total} {s.unit}</div>
+              <div className="mt-2 text-sm">Total this period: {s.totalServings} {s.serving_size_unit}{s.totalServings !== 1 ? "s" : ""}</div>
             </div>
           )
         })}

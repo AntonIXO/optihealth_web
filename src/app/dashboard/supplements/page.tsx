@@ -9,10 +9,9 @@ import { Toaster } from "@/components/ui/toaster"
 export default function SupplementsPage() {
   const [editEntry, setEditEntry] = React.useState<null | {
     id: number
-    supplement_id: number
-    supplement_name: string
-    amount: number
-    unit: string
+    product_id: number
+    product_name: string
+    servings: number
     timestamp: string
     notes?: string | null
   }>(null)

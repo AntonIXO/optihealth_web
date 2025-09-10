@@ -7,18 +7,17 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 
-const UNITS = ["mg", "mcg", "g", "iu", "tsp", "tbsp", "pill"] as const
+type Product = { id: number; product_name: string; serving_size_unit: string }
 
-const fetcher = async (_key: string, q: string): Promise<Array<{ id: number; supplement_name: string }>> => {
+const fetcher = async (_key: string, q: string): Promise<Product[]> => {
   const supabase = createClient()
   const { data, error } = await supabase
-    .from("supplement_definitions")
-    .select("id, supplement_name")
-    .ilike("supplement_name", `%${q}%`)
-    .order("supplement_name", { ascending: true })
+    .from("supplement_products")
+    .select("id, product_name, serving_size_unit")
+    .ilike("product_name", `%${q}%`)
+    .order("product_name", { ascending: true })
     .limit(10)
   if (error) throw error
   return data
@@ -26,10 +25,9 @@ const fetcher = async (_key: string, q: string): Promise<Array<{ id: number; sup
 
 export type EditEntry = {
   id: number
-  supplement_id: number
-  supplement_name: string
-  amount: number
-  unit: string
+  product_id: number
+  product_name: string
+  servings: number
   timestamp: string
   notes?: string | null
 }
@@ -45,21 +43,20 @@ export function SupplementLogger({
   const supabase = useMemo(() => createClient(), [])
 
   const [nameQuery, setNameQuery] = useState("")
-  const [supplementId, setSupplementId] = useState<number | null>(null)
-  const [supplementName, setSupplementName] = useState("")
-  const [amount, setAmount] = useState<string>("")
-  const [unit, setUnit] = useState<string>(UNITS[0])
+  const [productId, setProductId] = useState<number | null>(null)
+  const [productName, setProductName] = useState("")
+  const [servings, setServings] = useState<string>("1")
+  const [servingUnit, setServingUnit] = useState<string>("pill")
   const [timestamp, setTimestamp] = useState<string>(() => new Date().toISOString().slice(0, 16)) // yyyy-MM-ddTHH:mm
   const [notes, setNotes] = useState<string>("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     if (editEntry) {
-      setSupplementId(editEntry.supplement_id)
-      setSupplementName(editEntry.supplement_name)
-      setNameQuery(editEntry.supplement_name)
-      setAmount(String(editEntry.amount))
-      setUnit(editEntry.unit)
+      setProductId(editEntry.product_id)
+      setProductName(editEntry.product_name)
+      setNameQuery(editEntry.product_name)
+      setServings(String(editEntry.servings))
       // convert editEntry.timestamp (ISO) to local datetime-local format
       const dt = new Date(editEntry.timestamp)
       const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000)
@@ -68,17 +65,18 @@ export function SupplementLogger({
     }
   }, [editEntry])
 
-  const { data: suggestions, isLoading } = useSWR<Array<{ id: number; supplement_name: string }>>(
+  const { data: suggestions, isLoading } = useSWR<Product[]>(
     nameQuery ? ["supplement-search", nameQuery] : null,
     ([, q]) => fetcher("supplement-search", q as string)
   )
 
-  const canSubmit = !!supplementId && amount !== "" && unit && timestamp
+  const canSubmit = !!productId && servings !== "" && timestamp
 
-  const handleSelectSuggestion = (id: number, name: string) => {
-    setSupplementId(id)
-    setSupplementName(name)
-    setNameQuery(name)
+  const handleSelectSuggestion = (p: Product) => {
+    setProductId(p.id)
+    setProductName(p.product_name)
+    setServingUnit(p.serving_size_unit || "pill")
+    setNameQuery(p.product_name)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -89,9 +87,8 @@ export function SupplementLogger({
     try {
       const iso = new Date(timestamp)
       const payload = {
-        supplement_id: supplementId!,
-        amount: Number(amount),
-        unit: unit as (typeof UNITS)[number],
+        product_id: productId!,
+        servings: Number(servings),
         timestamp: iso.toISOString(),
         notes: notes || null,
       }
@@ -119,8 +116,7 @@ export function SupplementLogger({
 
       // Clear form
       if (!editEntry) {
-        setAmount("")
-        setUnit(UNITS[0])
+        setServings("1")
         setTimestamp(new Date().toISOString().slice(0, 16))
         setNotes("")
       }
@@ -138,28 +134,31 @@ export function SupplementLogger({
       <h2 className="text-lg font-semibold mb-4">Log Your Intake</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label>Supplement</Label>
+          <Label>Product</Label>
           <Input
-            placeholder="Start typing, e.g. Magnesium Glycinate"
+            placeholder="Start typing, e.g. Doctor's Best Lutein"
             value={nameQuery}
             onChange={(e) => {
               const v = e.target.value
               setNameQuery(v)
-              setSupplementId(null)
-              setSupplementName("")
+              setProductId(null)
+              setProductName("")
             }}
           />
           {nameQuery && (
             <div className="border rounded-md max-h-56 overflow-auto bg-background">
               {isLoading && <div className="p-2 text-sm text-muted-foreground">Searching…</div>}
-              {suggestions?.map((s: any) => (
+              {suggestions?.map((p) => (
                 <button
-                  key={s.id}
+                  key={p.id}
                   type="button"
-                  onClick={() => handleSelectSuggestion(s.id, s.supplement_name)}
+                  onClick={() => handleSelectSuggestion(p)}
                   className="w-full text-left px-3 py-2 hover:bg-accent hover:text-accent-foreground"
                 >
-                  {s.supplement_name}
+                  <div className="flex items-center justify-between">
+                    <span>{p.product_name}</span>
+                    <span className="text-xs text-muted-foreground">{p.serving_size_unit}</span>
+                  </div>
                 </button>
               ))}
               {suggestions && suggestions.length === 0 && !isLoading && (
@@ -171,23 +170,8 @@ export function SupplementLogger({
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="space-y-2">
-            <Label>Amount</Label>
-            <Input type="number" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label>Unit</Label>
-            <Select value={unit} onValueChange={setUnit}>
-              <SelectTrigger>
-                <SelectValue placeholder="Unit" />
-              </SelectTrigger>
-              <SelectContent>
-                {UNITS.map((u) => (
-                  <SelectItem key={u} value={u}>
-                    {u}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Servings{servingUnit ? ` (${servingUnit})` : ""}</Label>
+            <Input type="number" inputMode="decimal" min="0" step="0.5" value={servings} onChange={(e) => setServings(e.target.value)} />
           </div>
           <div className="space-y-2 col-span-2">
             <Label>Timestamp</Label>
