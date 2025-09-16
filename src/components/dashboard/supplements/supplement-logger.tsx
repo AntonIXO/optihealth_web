@@ -76,7 +76,7 @@ export function SupplementLogger({
     ([, q, uid]) => fetcher("supplement-search", q as string, uid as string | null)
   )
 
-  const canSubmit = !!productId && servings !== "" && timestamp
+  const canSubmit = !!productId && servings !== "" && timestamp && !!userId
 
   const handleSelectSuggestion = (p: Product) => {
     setProductId(p.id)
@@ -93,6 +93,7 @@ export function SupplementLogger({
     try {
       const iso = new Date(timestamp)
       const payload = {
+        user_id: userId!,
         product_id: productId!,
         servings: Number(servings),
         timestamp: iso.toISOString(),
