@@ -92,6 +92,8 @@ export const reducer = (state: State, action: any): State => {
         toasts: state.toasts.filter((t) => t.id !== action.toastId),
       }
   }
+  // default: return current state for unknown actions
+  return state
 }
 
 const listeners: Array<(state: State) => void> = []

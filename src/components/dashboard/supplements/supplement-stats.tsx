@@ -38,6 +38,17 @@ async function fetchStats(range: RangeKey): Promise<StatRow[]> {
   const supabase = createClient()
 
   // Fetch logs within range with supplement names
+  type Row = {
+    timestamp: string
+    servings: number | null
+    product_id: string | number
+    // The relation can sometimes be inferred as an array in types, so allow both
+    supplement_products?:
+      | { id: any; product_name?: string | null; serving_size_unit?: string | null }
+      | Array<{ id: any; product_name?: string | null; serving_size_unit?: string | null }>
+      | null
+  }
+
   const { data, error } = await supabase
     .from("supplement_logs")
     .select(
@@ -49,15 +60,17 @@ async function fetchStats(range: RangeKey): Promise<StatRow[]> {
 
   const byProd: Record<string, { name: string; unit: string; totals: number; days: Set<string>; dates: string[] }> = {}
 
-  for (const r of data ?? []) {
-    const name = r.supplement_products?.product_name ?? ""
-    const unit = (r.supplement_products?.serving_size_unit as string) ?? "pill"
+  for (const r of (data as Row[] | null) ?? []) {
+    const rel = r.supplement_products
+    const relObj = Array.isArray(rel) ? rel[0] : rel
+    const name = relObj?.product_name ?? ""
+    const unit = (relObj?.serving_size_unit as string) ?? "pill"
     const key = `${name}__${unit}`
     const dayKey = new Date(r.timestamp).toISOString().slice(0, 10)
     if (!byProd[key]) {
       byProd[key] = { name, unit, totals: 0, days: new Set(), dates: [] }
     }
-    byProd[key].totals += Number(r.servings) || 0
+    byProd[key].totals += Number(r.servings ?? 0) || 0
     byProd[key].days.add(dayKey)
     byProd[key].dates.push(dayKey)
   }
