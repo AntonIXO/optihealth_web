@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
   metric_id: z.string().min(1, { message: "Please select a metric." }),
-  value: z.coerce.number({ invalid_type_error: "Value must be a number" }),
+  value: z.coerce.number(),
   timestamp: z.string().optional(),
 });
 
