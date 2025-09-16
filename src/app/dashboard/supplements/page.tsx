@@ -1,34 +1,48 @@
 "use client"
 
-import React from "react"
+import React, { useState } from "react"
 import { SupplementLogger } from "@/components/dashboard/supplements/supplement-logger"
-import { SupplementStats } from "@/components/dashboard/supplements/supplement-stats"
 import { SupplementHistory } from "@/components/dashboard/supplements/supplement-history"
+import { SupplementStats } from "@/components/dashboard/supplements/supplement-stats"
+import { Plus } from "lucide-react"
+import Link from "next/link"
 import { Toaster } from "@/components/ui/toaster"
 
 export default function SupplementsPage() {
-  const [editEntry, setEditEntry] = React.useState<null | {
-    id: number
-    product_id: number
-    product_name: string
-    servings: number
-    timestamp: string
-    notes?: string | null
-  }>(null)
-
-  const onSaved = () => {
-    // Clear edit state after a successful save
-    setEditEntry(null)
-  }
+  const [editEntry, setEditEntry] = useState<any>(null)
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="space-y-6">
-          <SupplementLogger editEntry={editEntry} onSaved={onSaved} />
-          <SupplementStats />
-        </div>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
+          <h1 className="text-3xl font-bold text-white">Supplements</h1>
+          <p className="mt-2 text-white/70">
+            Track your daily supplement intake and adherence
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <Link 
+            href="/dashboard/supplements/cabinet"
+            className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-white transition hover:bg-white/20"
+          >
+            <Plus className="h-4 w-4" />
+            Manage Cabinet
+          </Link>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="space-y-8">
+          <div className="rounded-xl border border-white/20 bg-white/10 p-6 backdrop-blur-md">
+            <SupplementLogger editEntry={editEntry} onSaved={() => setEditEntry(null)} />
+          </div>
+          <div className="rounded-xl border border-white/20 bg-white/10 p-6 backdrop-blur-md">
+            <SupplementStats />
+          </div>
+        </div>
+        <div className="rounded-xl border border-white/20 bg-white/10 p-6 backdrop-blur-md">
           <SupplementHistory onEdit={setEditEntry} />
         </div>
       </div>

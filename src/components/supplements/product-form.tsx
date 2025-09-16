@@ -122,7 +122,7 @@ export function ProductForm({
   const [productName, setProductName] = useState("")
   const [servingUnit, setServingUnit] = useState("pill")
   const [barcode, setBarcode] = useState("")
-  const [isPublic, setIsPublic] = useState(false)
+  const [isPublic, setIsPublic] = useState(true)
   const [rows, setRows] = useState<ComponentRow[]>([{ component_id: null, component_name: "", amount: "", unit: "mg" }])
   const [showReqModal, setShowReqModal] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -132,7 +132,7 @@ export function ProductForm({
       setProductName("")
       setServingUnit("pill")
       setBarcode("")
-      setIsPublic(false)
+      setIsPublic(true)
       setRows([{ component_id: null, component_name: "", amount: "", unit: "mg" }])
     }
   }, [open])
@@ -166,10 +166,22 @@ export function ProductForm({
     if (!canSave) return
     setSaving(true)
     try {
+      // Get current user ID
+      const { data: { user }, error: userErr } = await supabase.auth.getUser()
+      if (userErr || !user) {
+        throw new Error("Not authenticated")
+      }
+
       // 1) Create product
       const { data: prodIns, error: prodErr } = await supabase
         .from("supplement_products")
-        .insert([{ product_name: productName.trim(), serving_size_unit: servingUnit, barcode: barcode || null, is_public: isPublic }])
+        .insert([{ 
+          user_id: user.id,
+          product_name: productName.trim(), 
+          serving_size_unit: servingUnit, 
+          barcode: barcode || null, 
+          is_public: isPublic 
+        }])
         .select("id")
         .single()
       if (prodErr) throw prodErr
