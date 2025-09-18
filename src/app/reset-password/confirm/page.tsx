@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 
 export default function ResetPasswordConfirmPage() {
@@ -13,7 +13,6 @@ export default function ResetPasswordConfirmPage() {
   const [showPassword, setShowPassword] = useState(false);
   
   const router = useRouter();
-  const searchParams = useSearchParams();
   const supabase = createClient();
 
   useEffect(() => {

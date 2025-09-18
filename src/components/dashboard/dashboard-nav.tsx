@@ -12,7 +12,8 @@ import {
   LogOut,
   Menu,
   X,
-  Target
+  Target,
+  BookOpen
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -30,6 +31,7 @@ export default function DashboardNav({ user }: DashboardNavProps) {
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Data", href: "/dashboard/data", icon: BarChart3 },
+    { name: "Journal", href: "/dashboard/journal", icon: BookOpen },
     { name: "Supplements", href: "/dashboard/supplements", icon: BarChart3 },
     { name: "Cabinet", href: "/dashboard/supplements/cabinet", icon: BarChart3 },
     { name: "Insights", href: "/dashboard/insights", icon: Brain },
