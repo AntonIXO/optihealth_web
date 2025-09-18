@@ -77,16 +77,33 @@ BEGIN
     SELECT 
         'supplement'::TEXT as item_type,
         sl.timestamp as timestamp_value,
-        sd.supplement_name as title,
-        sl.amount::TEXT || ' ' || sl.unit::TEXT || 
+        sp.product_name as title,
+        (sl.servings::TEXT || ' ' || sp.serving_size_unit::TEXT) || 
         CASE WHEN sl.notes IS NOT NULL THEN ' - ' || sl.notes ELSE '' END as description,
-        sl.amount as value_numeric,
+        sl.servings as value_numeric,
         sl.notes as value_text,
-        sl.unit::TEXT as unit,
+        sp.serving_size_unit::TEXT as unit,
         'supplement'::TEXT as category,
-        json_build_object('notes', sl.notes)::JSONB as properties
+        json_build_object(
+            'notes', sl.notes,
+            'servings', sl.servings,
+            'components', (
+                SELECT json_agg(
+                    json_build_object(
+                        'component_id', pcl.component_id,
+                        'component_name', sc.supplement_name,
+                        'amount_per_serving', pcl.amount,
+                        'unit', pcl.unit::TEXT
+                    )
+                    ORDER BY sc.supplement_name
+                )
+                FROM public.product_component_link pcl
+                JOIN public.supplement_components sc ON sc.id = pcl.component_id
+                WHERE pcl.product_id = sl.product_id
+            )
+        )::JSONB as properties
     FROM public.supplement_logs sl
-    JOIN public.supplement_definitions sd ON sl.supplement_id = sd.id
+    JOIN public.supplement_products sp ON sl.product_id = sp.id
     WHERE sl.user_id = user_id_input
       AND DATE(sl.timestamp) = target_date
     
