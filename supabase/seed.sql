@@ -26,10 +26,7 @@ INSERT INTO public.metric_definitions (metric_name, category, default_unit, beau
 ('sleep_duration_light', 'Sleep', 'minutes', 'Light Sleep'),
 ('sleep_duration_rem', 'Sleep', 'minutes', 'REM Sleep'),
 ('sleep_duration_awake', 'Sleep', 'minutes', 'Time Awake'),
-('sleep_score', 'Sleep', 'number', 'Sleep Score'),
 ('sleep_stages', 'Sleep', 'json', 'Sleep Stages'),
--- Mental Health & Mood
-('mental_health_log', 'Mental Health', 'text', 'Mental Health Log'),
 -- Environment
 ('environment_uv_index', 'Environment', 'index', 'UV Index'),
 ('environment_air_quality', 'Environment', 'aqi', 'Air Quality'),
@@ -41,6 +38,24 @@ INSERT INTO public.metric_definitions (metric_name, category, default_unit, beau
 ('nutrition_glucose_blood', 'Nutrition', 'mg/dL', 'Blood Glucose'),
 -- Blood pressure
 ('blood_pressure_systolic', 'Blood pressure', 'mmHg', 'Systolic Blood Pressure'),
-('blood_pressure_diastolic', 'Blood pressure', 'mmHg', 'Diastolic Blood Pressure')
+('blood_pressure_diastolic', 'Blood pressure', 'mmHg', 'Diastolic Blood Pressure'),
+
+-- Neiry
+('cognitive_score', 'Neiry', 'score', 'Cognitive Score'),
+('focus', 'Neiry', 'score', 'Focus'),
+('chill', 'Neiry', 'score', 'Chill'),
+('stress', 'Neiry', 'score', 'Stress'),
+('self_control', 'Neiry', 'score', 'Self-Control'),
+('anger', 'Neiry', 'score', 'Anger'),
+('relaxation_index', 'Neiry', 'index', 'Relaxation Index'),
+('concentration_index', 'Neiry', 'index', 'Concentration Index'),
+('fatigue_score', 'Neiry', 'score', 'Fatigue Score'),
+('reverse_fatigue', 'Neiry', 'score', 'Reverse Fatigue'),
+('alpha_gravity', 'Neiry', 'score', 'Alpha Gravity')
+
+-- Brain
+('iAF', 'Brain', 'hz', 'Individual Alpha Frequency'),
+('iAPF', 'Brain', 'hz', 'Individual Alpha Peak Frequency'),
+
 ON CONFLICT (metric_name) DO UPDATE SET
   beautiful_name = EXCLUDED.beautiful_name;

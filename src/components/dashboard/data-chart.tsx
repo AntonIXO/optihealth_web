@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useRef } from 'react';
 import { Bar, Line, Scatter } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -15,6 +16,8 @@ import {
   ChartOptions,
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
+import zoomPlugin from 'chartjs-plugin-zoom';
+import { Button } from '@/components/ui/button';
 
 ChartJS.register(
   CategoryScale,
@@ -25,7 +28,8 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  TimeScale
+  TimeScale,
+  zoomPlugin
 );
 
 interface DataChartProps {
@@ -43,9 +47,16 @@ interface DataChartProps {
   minTime?: number;
   maxTime?: number;
   scatterXScale?: 'time' | 'linear';
+  // Optional externally controlled viewport for X scale
+  externalMin?: number;
+  externalMax?: number;
+  // Callbacks when user changes or resets the viewport via zoom/pan
+  onViewportChange?: (min: number, max: number) => void;
+  onViewportReset?: () => void;
 }
 
-export function DataChart({ chartData, chartType, dayView, minTime, maxTime, scatterXScale = 'time' }: DataChartProps) {
+export function DataChart({ chartData, chartType, dayView, minTime, maxTime, scatterXScale = 'time', externalMin, externalMax, onViewportChange, onViewportReset }: DataChartProps) {
+  const chartRef = useRef<any>(null);
   const getOptions = (): ChartOptions<'line' | 'bar' | 'scatter'> => {
     const baseOptions = {
       responsive: true,
@@ -62,6 +73,44 @@ export function DataChart({ chartData, chartType, dayView, minTime, maxTime, sca
           text: 'Metric Over Time',
           color: 'rgba(255, 255, 255, 0.9)',
         },
+        zoom: {
+          limits: {
+            x: (externalMin !== undefined && externalMax !== undefined)
+              ? { min: externalMin, max: externalMax }
+              : (dayView ? { min: minTime, max: maxTime } : undefined),
+          },
+          pan: {
+            enabled: true,
+            mode: (chartType === 'scatter' && scatterXScale === 'linear') ? 'xy' : 'x',
+            modifierKey: 'shift',
+            onPanComplete: () => {
+              const x = (chartRef.current as any)?.scales?.x;
+              if (x && typeof x.min === 'number' && typeof x.max === 'number') {
+                onViewportChange?.(x.min, x.max);
+              }
+            },
+          },
+          zoom: {
+            wheel: {
+              enabled: true,
+            },
+            pinch: {
+              enabled: true,
+            },
+            drag: {
+              enabled: true,
+              backgroundColor: 'rgba(59,130,246,0.15)',
+              borderColor: 'rgba(59,130,246,0.4)'
+            },
+            mode: (chartType === 'scatter' && scatterXScale === 'linear') ? 'xy' : 'x',
+            onZoomComplete: () => {
+              const x = (chartRef.current as any)?.scales?.x;
+              if (x && typeof x.min === 'number' && typeof x.max === 'number') {
+                onViewportChange?.(x.min, x.max);
+              }
+            },
+          },
+        } as any,
       },
       scales: {
         y: {
@@ -101,8 +150,8 @@ export function DataChart({ chartData, chartType, dayView, minTime, maxTime, sca
               unit: dayView ? ('hour' as const) : ('day' as const),
               displayFormats: dayView ? { hour: 'HH:mm' } : undefined,
             },
-            min: dayView ? minTime : undefined,
-            max: dayView ? maxTime : undefined,
+            min: (externalMin !== undefined ? externalMin : (dayView ? minTime : undefined)),
+            max: (externalMax !== undefined ? externalMax : (dayView ? maxTime : undefined)),
             ticks: { color: 'rgba(255, 255, 255, 0.7)' },
             grid: { color: 'rgba(255, 255, 255, 0.1)' },
           },
@@ -117,8 +166,8 @@ export function DataChart({ chartData, chartType, dayView, minTime, maxTime, sca
           ...baseOptions.scales,
           x: {
             type: 'time' as const,
-            min: minTime,
-            max: maxTime,
+            min: (externalMin !== undefined ? externalMin : minTime),
+            max: (externalMax !== undefined ? externalMax : maxTime),
             time: {
               unit: 'hour' as const,
               displayFormats: { hour: 'HH:mm' },
@@ -144,6 +193,8 @@ export function DataChart({ chartData, chartType, dayView, minTime, maxTime, sca
           time: {
             unit: 'day' as const,
           },
+          min: (externalMin !== undefined ? externalMin : undefined),
+          max: (externalMax !== undefined ? externalMax : undefined),
           ticks: {
             color: 'rgba(255, 255, 255, 0.7)',
           },
@@ -160,12 +211,24 @@ export function DataChart({ chartData, chartType, dayView, minTime, maxTime, sca
 
   return (
     <div className="h-96 w-full">
+      <div className="flex justify-end mb-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            (chartRef.current as any)?.resetZoom?.();
+            onViewportReset?.();
+          }}
+        >
+          Reset zoom
+        </Button>
+      </div>
       {finalChartType === 'line' ? (
-        <Line options={finalOptions} data={chartData} />
+        <Line ref={chartRef} options={finalOptions} data={chartData} />
       ) : finalChartType === 'bar' ? (
-        <Bar options={finalOptions} data={chartData} />
+        <Bar ref={chartRef} options={finalOptions} data={chartData} />
       ) : (
-        <Scatter options={finalOptions} data={chartData} />
+        <Scatter ref={chartRef} options={finalOptions} data={chartData} />
       )}
     </div>
   );
