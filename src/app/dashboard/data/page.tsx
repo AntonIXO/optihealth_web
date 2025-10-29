@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, Download, Filter, Calendar, Plus, X, ScatterChart, Info } from "lucide-react";
+import { BarChart3, Download, Filter, Calendar, Plus, X, ScatterChart, Info, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Calendar as RangeCalendar } from "@/components/ui/calendar";
@@ -62,6 +62,8 @@ export default function DataPage() {
   const [compareMode, setCompareMode] = useState(false);
   const [dayView, setDayView] = useState(false);
   const [normalizeCompare, setNormalizeCompare] = useState(true);
+  const [timeOffset, setTimeOffset] = useState(0); // Days to shift the time window
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [minTime, setMinTime] = useState<number | undefined>();
   const [maxTime, setMaxTime] = useState<number | undefined>();
   const [viewportMin, setViewportMin] = useState<number | undefined>(undefined);
@@ -108,21 +110,25 @@ export default function DataPage() {
         endDate = new Date(`${customEndParam}T23:59:59.999Z`);
       } else {
         const now = new Date();
-        // End of current day (local)
+        // End of current day (local) - shifted by timeOffset
         endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        endDate.setDate(endDate.getDate() + timeOffset);
 
         if (range.endsWith('d')) {
           const rangeDays = parseInt(range.slice(0, -1), 10);
           // Start of day 'rangeDays - 1' days ago (inclusive)
-          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          startDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+          startDate.setHours(0, 0, 0, 0);
           startDate.setDate(startDate.getDate() - rangeDays + 1);
         } else if (range.endsWith('y')) {
           const years = parseInt(range.slice(0, -1), 10);
           // Start of day exactly N years ago
-          startDate = new Date(now.getFullYear() - years, now.getMonth(), now.getDate());
+          startDate = new Date(endDate.getFullYear() - years, endDate.getMonth(), endDate.getDate());
+          startDate.setHours(0, 0, 0, 0);
         } else {
           // Default 30 days
-          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          startDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+          startDate.setHours(0, 0, 0, 0);
           startDate.setDate(startDate.getDate() - 30 + 1);
         }
       }
@@ -374,7 +380,7 @@ export default function DataPage() {
     if (supabase && metric && (range !== 'custom' || (customStartParam && customEndParam))) {
       fetchData();
     }
-  }, [supabase, metric, metric2, range, customStartParam, customEndParam, dayView, compareMode, viewportMin, viewportMax]);
+  }, [supabase, metric, metric2, range, customStartParam, customEndParam, dayView, compareMode, viewportMin, viewportMax, timeOffset]);
 
   // Debounced handler from chart viewport changes
   const handleViewportChange = (min: number, max: number) => {
@@ -390,6 +396,87 @@ export default function DataPage() {
     setViewportMax(undefined);
   };
 
+  // Calculate the step size based on the current range
+  const getNavigationStep = () => {
+    if (dayView) return 1; // 1 day for day view
+    if (range === '7d') return 7;
+    if (range === '30d') return 30;
+    if (range === '90d') return 30;
+    if (range === '1y') return 90;
+    if (range === 'custom' && customStartParam && customEndParam) {
+      const start = new Date(customStartParam);
+      const end = new Date(customEndParam);
+      const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      return Math.max(1, Math.floor(days / 3)); // Move by 1/3 of the range
+    }
+    return 30; // Default
+  };
+
+  const handleTimeShift = (direction: 'prev' | 'next' | 'start' | 'end') => {
+    const step = getNavigationStep();
+    
+    if (direction === 'prev') {
+      setTimeOffset(prev => prev - step);
+    } else if (direction === 'next') {
+      setTimeOffset(prev => prev + step);
+    } else if (direction === 'start') {
+      setTimeOffset(prev => prev - step * 10); // Jump far back
+    } else if (direction === 'end') {
+      setTimeOffset(0); // Reset to current/latest data
+    }
+  };
+
+  const isAtCurrentTime = timeOffset === 0;
+
+  const handleDeleteDataPoint = async (timestamp: string, value: number) => {
+    if (!confirm(`Are you sure you want to delete this data point?\n\nDate: ${new Date(timestamp).toLocaleString()}\nValue: ${value.toFixed(2)}`)) {
+      return;
+    }
+
+    setDeletingId(timestamp);
+
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user?.id) {
+        alert('User not authenticated');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('data_points')
+        .delete()
+        .eq('user_id', user.user.id)
+        .eq('timestamp', timestamp)
+        .eq('value_numeric', value);
+
+      if (error) {
+        console.error('Error deleting data point:', error);
+        alert(`Failed to delete data point: ${error.message}`);
+      } else {
+        // Refresh the data
+        // Remove from local state immediately for better UX
+        setChartData(prev => prev.filter(d => d.bucket !== timestamp));
+        setTableData(prev => prev.filter(d => d.bucket !== timestamp));
+        
+        // Also trigger a full data refresh to ensure consistency
+        const fetchData = async () => {
+          // Re-fetch data using existing logic
+          window.location.reload(); // Simple refresh for now, or you can call the fetchData from useEffect
+        };
+        
+        // Small delay before refresh to show the deletion feedback
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      }
+    } catch (error) {
+      console.error('Error deleting data point:', error);
+      alert('An unexpected error occurred while deleting the data point');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const handleFilterChange = (key: 'metric' | 'metric2' | 'range' | 'type', value: string) => {
     const current = new URLSearchParams(Array.from(searchParams.entries()));
     current.set(key, value);
@@ -400,6 +487,8 @@ export default function DataPage() {
       if (value.endsWith('d') || value.endsWith('y')) {
         current.delete('dayView');
       }
+      // Reset time offset when range changes
+      setTimeOffset(0);
     }
     // Reset viewport on any filter change
     setViewportMin(undefined);
@@ -772,6 +861,88 @@ export default function DataPage() {
             </div>
           </div>
         )}
+        
+        {/* Time Navigation Slider */}
+        {chartData.length > 0 && range !== 'custom' && (
+          <div className="mt-6 pt-6 border-t border-white/10">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-white/60">Time Navigation</span>
+              {!isAtCurrentTime && (
+                <button
+                  onClick={() => setTimeOffset(0)}
+                  className="text-xs text-blue-400 hover:text-blue-300 transition"
+                >
+                  Reset to Current
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleTimeShift('start')}
+                className="p-2 rounded-lg border border-white/20 bg-white/5 text-white hover:bg-white/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Jump back"
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => handleTimeShift('prev')}
+                className="p-2 rounded-lg border border-white/20 bg-white/5 text-white hover:bg-white/10 transition"
+                title={`Previous ${getNavigationStep()} days`}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              
+              <div className="flex-1 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-center">
+                <div className="text-white text-sm font-medium">
+                  {timeOffset === 0 ? (
+                    'Current Period'
+                  ) : timeOffset > 0 ? (
+                    `${timeOffset} days ahead`
+                  ) : (
+                    `${Math.abs(timeOffset)} days ago`
+                  )}
+                </div>
+                <div className="text-white/60 text-xs mt-0.5">
+                  {(() => {
+                    const now = new Date();
+                    const end = new Date(now);
+                    end.setDate(end.getDate() + timeOffset);
+                    
+                    let start = new Date(end);
+                    if (range.endsWith('d')) {
+                      const days = parseInt(range.slice(0, -1), 10);
+                      start.setDate(start.getDate() - days + 1);
+                    } else if (range.endsWith('y')) {
+                      const years = parseInt(range.slice(0, -1), 10);
+                      start.setFullYear(start.getFullYear() - years);
+                    } else {
+                      start.setDate(start.getDate() - 30 + 1);
+                    }
+                    
+                    return `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`;
+                  })()}
+                </div>
+              </div>
+              
+              <button
+                onClick={() => handleTimeShift('next')}
+                className="p-2 rounded-lg border border-white/20 bg-white/5 text-white hover:bg-white/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isAtCurrentTime}
+                title={`Next ${getNavigationStep()} days`}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => handleTimeShift('end')}
+                className="p-2 rounded-lg border border-white/20 bg-white/5 text-white hover:bg-white/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isAtCurrentTime}
+                title="Jump to current"
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Summary */}
@@ -820,12 +991,13 @@ export default function DataPage() {
                   <th className="text-left py-3 px-4 text-white/90 font-medium">Metric</th>
                   <th className="text-left py-3 px-4 text-white/90 font-medium">Value</th>
                   <th className="text-left py-3 px-4 text-white/90 font-medium">Unit</th>
+                  <th className="w-12 py-3 px-4"></th>
                 </tr>
               </thead>
                             <tbody>
                 {tableData.length > 0 ? (
                   tableData.map((row) => (
-                    <tr key={row.bucket} className="border-b border-white/10">
+                    <tr key={row.bucket} className="border-b border-white/10 group hover:bg-white/5 transition-colors">
                       <td className="py-3 px-4 text-white/90">
                         {dayView ? new Date(row.bucket).toLocaleString() : new Date(row.bucket).toLocaleDateString()}
                       </td>
@@ -834,11 +1006,25 @@ export default function DataPage() {
                       <td className="py-3 px-4 text-white/90">
                         {metrics.find(m => m.metric_name === metric)?.default_unit || 'N/A'}
                       </td>
+                      <td className="py-3 px-4">
+                        <button
+                          onClick={() => handleDeleteDataPoint(row.bucket, row.value)}
+                          disabled={deletingId === row.bucket}
+                          className="rounded-lg border border-red-400/20 bg-red-500/10 p-1.5 text-red-400 opacity-0 backdrop-blur-sm transition-all hover:bg-red-500/20 hover:border-red-400/40 hover:text-red-300 group-hover:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-500/10"
+                          title="Delete this data point"
+                        >
+                          {deletingId === row.bucket ? (
+                            <div className="animate-spin h-4 w-4 border-2 border-red-400 border-t-transparent rounded-full" />
+                          ) : (
+                            <X className="h-4 w-4" />
+                          )}
+                        </button>
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={4} className="text-center py-8 text-white/50">
+                    <td colSpan={5} className="text-center py-8 text-white/50">
                       No data available
                     </td>
                   </tr>

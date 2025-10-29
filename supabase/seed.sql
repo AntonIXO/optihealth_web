@@ -51,11 +51,11 @@ INSERT INTO public.metric_definitions (metric_name, category, default_unit, beau
 ('concentration_index', 'Neiry', 'index', 'Concentration Index'),
 ('fatigue_score', 'Neiry', 'score', 'Fatigue Score'),
 ('reverse_fatigue', 'Neiry', 'score', 'Reverse Fatigue'),
-('alpha_gravity', 'Neiry', 'score', 'Alpha Gravity')
+('alpha_gravity', 'Neiry', 'score', 'Alpha Gravity'),
 
 -- Brain
 ('iAF', 'Brain', 'hz', 'Individual Alpha Frequency'),
-('iAPF', 'Brain', 'hz', 'Individual Alpha Peak Frequency'),
+('iAPF', 'Brain', 'hz', 'Individual Alpha Peak Frequency')
 
 ON CONFLICT (metric_name) DO UPDATE SET
   beautiful_name = EXCLUDED.beautiful_name;
