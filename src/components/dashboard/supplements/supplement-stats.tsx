@@ -37,23 +37,31 @@ async function fetchStats(range: RangeKey): Promise<StatRow[]> {
   const { start, end } = rangeToDates(range)
   const supabase = createClient()
 
-  // Fetch logs within range with supplement names
   type Row = {
     timestamp: string
-    servings: number | null
-    product_id: string | number
-    // The relation can sometimes be inferred as an array in types, so allow both
-    supplement_products?:
-      | { id: any; product_name?: string | null; serving_size_unit?: string | null }
-      | Array<{ id: any; product_name?: string | null; serving_size_unit?: string | null }>
-      | null
+    dosage_amount: number | null
+    dosage_unit: string
+    product_id: string
+    products?: {
+      id: string
+      name_on_bottle: string
+      form_factor: string
+    } | Array<{
+      id: string
+      name_on_bottle: string
+      form_factor: string
+    }> | null
   }
 
   const { data, error } = await supabase
     .from("supplement_logs")
-    .select(
-      `timestamp, servings, product_id, supplement_products:product_id(id, product_name, serving_size_unit)`
-    )
+    .select(`
+      timestamp,
+      dosage_amount,
+      dosage_unit,
+      product_id,
+      products(id, name_on_bottle, form_factor)
+    `)
     .gte("timestamp", start.toISOString())
     .lte("timestamp", end.toISOString())
   if (error) throw error
@@ -61,16 +69,15 @@ async function fetchStats(range: RangeKey): Promise<StatRow[]> {
   const byProd: Record<string, { name: string; unit: string; totals: number; days: Set<string>; dates: string[] }> = {}
 
   for (const r of (data as Row[] | null) ?? []) {
-    const rel = r.supplement_products
-    const relObj = Array.isArray(rel) ? rel[0] : rel
-    const name = relObj?.product_name ?? ""
-    const unit = (relObj?.serving_size_unit as string) ?? "pill"
+    const product = Array.isArray(r.products) ? r.products[0] : r.products
+    const name = product?.name_on_bottle ?? ""
+    const unit = r.dosage_unit ?? product?.form_factor ?? "capsule"
     const key = `${name}__${unit}`
     const dayKey = new Date(r.timestamp).toISOString().slice(0, 10)
     if (!byProd[key]) {
       byProd[key] = { name, unit, totals: 0, days: new Set(), dates: [] }
     }
-    byProd[key].totals += Number(r.servings ?? 0) || 0
+    byProd[key].totals += Number(r.dosage_amount ?? 0) || 0
     byProd[key].days.add(dayKey)
     byProd[key].dates.push(dayKey)
   }

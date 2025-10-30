@@ -12,74 +12,78 @@ import { Trash2, Pencil } from "lucide-react"
 const PAGE_SIZE = 20
 
 type HistoryRow = {
-  id: number
+  id: string
   timestamp: string
-  servings: number
+  dosage_amount: number
+  dosage_unit: string
+  intake_form: string
+  calculated_dosage_mg: number | null
   notes: string | null
-  product_id: number
+  product_id: string
   product_name: string
-  serving_size_unit: string
+  vendor_name: string
+  compound_name: string
+  form_factor: string
 }
 
 const fetchHistory = async (page: number, search: string): Promise<{ rows: HistoryRow[]; hasMore: boolean }> => {
   const supabase = createClient()
 
-  let filterIds: number[] | null = null
-  if (search) {
-    const { data: prods, error: prodErr } = await supabase
-      .from("supplement_products")
-      .select("id")
-      .ilike("product_name", `%${search}%`)
-      .limit(50)
-    if (prodErr) throw prodErr
-    filterIds = (prods ?? []).map((d: { id: number }) => d.id)
-    if (filterIds.length === 0) {
-      return { rows: [], hasMore: false }
-    }
-  }
-
   let query = supabase
     .from("supplement_logs")
-    .select(
-      `id, timestamp, servings, notes, product_id,
-       supplement_products:product_id(id, product_name, serving_size_unit)`
-    )
+    .select(`
+      id,
+      timestamp,
+      dosage_amount,
+      dosage_unit,
+      intake_form,
+      calculated_dosage_mg,
+      notes,
+      product_id,
+      products!inner(
+        id,
+        name_on_bottle,
+        form_factor,
+        vendors(name),
+        compounds(full_name)
+      )
+    `)
     .order("timestamp", { ascending: false })
 
-  if (filterIds) {
-    query = query.in("product_id", filterIds)
+  if (search) {
+    query = query.ilike("products.name_on_bottle", `%${search}%`)
   }
 
   const from = (page - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
-  const { data, error, count } = await query.range(from, to)
+  const { data, error } = await query.range(from, to)
   if (error) throw error
 
-  const rows: HistoryRow[] = (data ?? []).map((r: any): HistoryRow => ({
-    id: r.id,
-    timestamp: r.timestamp,
-    servings: r.servings,
-    notes: r.notes,
-    product_id: r.product_id,
-    product_name: r.supplement_products?.product_name ?? "",
-    serving_size_unit: r.supplement_products?.serving_size_unit ?? "pill",
-  }))
+  const rows: HistoryRow[] = (data ?? []).map((r: any): HistoryRow => {
+    const product = Array.isArray(r.products) ? r.products[0] : r.products
+    const vendor = product?.vendors ? (Array.isArray(product.vendors) ? product.vendors[0] : product.vendors) : null
+    const compound = product?.compounds ? (Array.isArray(product.compounds) ? product.compounds[0] : product.compounds) : null
+    
+    return {
+      id: r.id,
+      timestamp: r.timestamp,
+      dosage_amount: r.dosage_amount,
+      dosage_unit: r.dosage_unit,
+      intake_form: r.intake_form,
+      calculated_dosage_mg: r.calculated_dosage_mg,
+      notes: r.notes,
+      product_id: r.product_id,
+      product_name: product?.name_on_bottle ?? "",
+      vendor_name: vendor?.name ?? "",
+      compound_name: compound?.full_name ?? "",
+      form_factor: product?.form_factor ?? "capsule",
+    }
+  })
 
   return { rows, hasMore: (data ?? []).length === PAGE_SIZE }
 }
 
-export function SupplementHistory({
-  onEdit,
-}: {
-  onEdit?: (entry: {
-    id: number
-    product_id: number
-    product_name: string
-    servings: number
-    timestamp: string
-    notes?: string | null
-  }) => void
-}) {
+export function SupplementHistory() {
   const { toast } = useToast()
   const supabase = useMemo(() => createClient(), [])
   const [page, setPage] = useState(1)
@@ -94,7 +98,7 @@ export function SupplementHistory({
   const rows = data?.rows ?? []
   const hasMore = data?.hasMore ?? false
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     const confirmed = window.confirm("Are you sure you want to delete this entry?")
     if (!confirmed) return
 
@@ -140,34 +144,27 @@ export function SupplementHistory({
             key={r.id}
             className="flex items-start justify-between border rounded-md p-3"
           >
-            <div className="space-y-1">
-              <div className="text-sm text-foreground">
-                {new Date(r.timestamp).toLocaleString()} — Logged {r.servings} {r.serving_size_unit}
-                {r.servings !== 1 ? "s" : ""} of {r.product_name}
+            <div className="space-y-1 flex-1">
+              <div className="text-sm font-medium text-foreground">
+                {r.product_name}
               </div>
+              <div className="text-xs text-muted-foreground">
+                {r.vendor_name} · {r.compound_name}
+              </div>
+              <div className="text-sm text-foreground mt-1">
+                {new Date(r.timestamp).toLocaleString()} — {r.dosage_amount} {r.dosage_unit}
+                {r.dosage_amount !== 1 ? "s" : ""}
+              </div>
+              {r.calculated_dosage_mg && (
+                <div className="text-xs text-muted-foreground">
+                  Total: {r.calculated_dosage_mg} mg · {r.intake_form}
+                </div>
+              )}
               {r.notes && (
-                <div className="text-xs text-muted-foreground">{r.notes}</div>
+                <div className="text-xs text-muted-foreground italic mt-1">"{r.notes}"</div>
               )}
             </div>
             <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() =>
-                  onEdit?.({
-                    id: r.id,
-                    product_id: r.product_id,
-                    product_name: r.product_name,
-                    servings: r.servings,
-                    timestamp: r.timestamp,
-                    notes: r.notes,
-                  })
-                }
-                aria-label="Edit"
-                title="Edit"
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
               <Button
                 variant="ghost"
                 size="icon"
