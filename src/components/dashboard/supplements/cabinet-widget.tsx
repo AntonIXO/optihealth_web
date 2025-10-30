@@ -32,6 +32,7 @@ const fetchCabinetProducts = async (): Promise<Product[]> => {
       compounds(full_name),
       vendors(name)
     `)
+    .eq("is_archived", false)
     .order("name_on_bottle", { ascending: true })
     .limit(10)
   if (error) throw error

@@ -36,6 +36,7 @@ const fetchCabinetProducts = async (uid: string | null): Promise<Product[]> => {
       compounds(full_name),
       vendors(name)
     `)
+    .eq("is_archived", false)
     .order("name_on_bottle", { ascending: true })
     .limit(20)
   if (error) throw error
@@ -57,6 +58,7 @@ const searchProducts = async (q: string, uid: string | null): Promise<Product[]>
       vendors(name)
     `)
     .ilike("name_on_bottle", `%${q}%`)
+    .eq("is_archived", false)
     .order("name_on_bottle", { ascending: true })
     .limit(10)
   if (error) throw error

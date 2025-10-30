@@ -35,6 +35,7 @@ export default function CabinetPage() {
         compounds!inner(id, full_name),
         vendors!inner(id, name)
       `)
+      .eq("is_archived", false)
       .order("created_at", { ascending: false })
 
     if (q) query = query.ilike("name_on_bottle", `%${q}%`)
@@ -50,14 +51,14 @@ export default function CabinetPage() {
     { keepPreviousData: true }
   )
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     const ok = window.confirm("Remove this product from your cabinet? This cannot be undone.")
     if (!ok) return
     const prev = data ?? []
     try {
       // optimistic update
       await mutate(prev.filter((p: any) => p.id !== id), { revalidate: false })
-      const { error } = await supabase.from("products").delete().eq("id", id)
+      const { error } = await supabase.from("products").update({ is_archived: true }).eq("id", id)
       if (error) throw error
       toast({ title: "Removed", description: "Product removed from your cabinet." })
       await mutate()
