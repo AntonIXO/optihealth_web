@@ -89,7 +89,7 @@ export default function Home() {
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400"> Actionable Insights</span>
               </h1>
               <p className="mt-6 text-lg leading-8 text-white/80 max-w-2xl mx-auto">
-                OptiHealth empowers you to collect, visualize, and analyze your personal health data. 
+                optiHealth empowers you to collect, visualize, and analyze your personal health data. 
                 Discover patterns, track progress, and unlock personalized insights with AI-powered analysis.
               </p>
               <div className="mt-10 flex items-center justify-center gap-x-6">

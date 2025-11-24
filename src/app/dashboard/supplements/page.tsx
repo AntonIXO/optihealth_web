@@ -1,15 +1,15 @@
 "use client"
 
-import React, { useState } from "react"
+import React from "react"
 import { SupplementLogger } from "@/components/dashboard/supplements/supplement-logger"
 import { SupplementHistory } from "@/components/dashboard/supplements/supplement-history"
 import { SupplementStats } from "@/components/dashboard/supplements/supplement-stats"
+import { TodaysLog } from "@/components/dashboard/supplements/todays-log"
 import { Plus } from "lucide-react"
 import Link from "next/link"
 import { Toaster } from "@/components/ui/toaster"
 
 export default function SupplementsPage() {
-  const [editEntry, setEditEntry] = useState<any>(null)
 
   return (
     <div className="space-y-8">
@@ -36,14 +36,17 @@ export default function SupplementsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-8">
           <div className="rounded-xl border border-white/20 bg-white/10 p-6 backdrop-blur-md">
-            <SupplementLogger editEntry={editEntry} onSaved={() => setEditEntry(null)} />
+            <SupplementLogger />
+          </div>
+          <div className="rounded-xl border border-white/20 bg-white/10 p-6 backdrop-blur-md">
+            <TodaysLog />
           </div>
           <div className="rounded-xl border border-white/20 bg-white/10 p-6 backdrop-blur-md">
             <SupplementStats />
           </div>
         </div>
         <div className="rounded-xl border border-white/20 bg-white/10 p-6 backdrop-blur-md">
-          <SupplementHistory onEdit={setEditEntry} />
+          <SupplementHistory />
         </div>
       </div>
       <Toaster />
