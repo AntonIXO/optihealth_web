@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/use-toast"
-import { ProductForm } from "@/components/supplements/product-form"
+import { AddProductWizard } from "@/components/supplements/add-product-wizard"
 import { Plus, RefreshCcw, Trash2 } from "lucide-react"
 
 export default function CabinetPage() {
@@ -22,15 +22,25 @@ export default function CabinetPage() {
   }, [supabase])
 
   const fetcher = async (key: string, q: string, uid: string | null) => {
-    const qb = supabase
-      .from("supplement_products")
-      .select("id, product_name, serving_size_unit, barcode, is_public, created_at, user_id")
+    let query = supabase
+      .from("products")
+      .select(`
+        id,
+        name_on_bottle,
+        form_factor,
+        unit_dosage,
+        unit_measure,
+        default_intake_form,
+        created_at,
+        compounds!inner(id, full_name),
+        vendors!inner(id, name)
+      `)
+      .eq("is_archived", false)
       .order("created_at", { ascending: false })
 
-    if (uid) qb.eq("user_id", uid)
-    if (q) qb.ilike("product_name", `%${q}%`)
+    if (q) query = query.ilike("name_on_bottle", `%${q}%`)
 
-    const { data, error } = await qb
+    const { data, error } = await query
     if (error) throw error
     return data
   }
@@ -41,14 +51,14 @@ export default function CabinetPage() {
     { keepPreviousData: true }
   )
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     const ok = window.confirm("Remove this product from your cabinet? This cannot be undone.")
     if (!ok) return
     const prev = data ?? []
     try {
       // optimistic update
       await mutate(prev.filter((p: any) => p.id !== id), { revalidate: false })
-      const { error } = await supabase.from("supplement_products").delete().eq("id", id)
+      const { error } = await supabase.from("products").update({ is_archived: true }).eq("id", id)
       if (error) throw error
       toast({ title: "Removed", description: "Product removed from your cabinet." })
       await mutate()
@@ -110,46 +120,44 @@ export default function CabinetPage() {
             </div>
           </div>
         )}
-        {data?.map((p: any) => (
-          <Card key={p.id} className="rounded-xl border border-white/20 bg-white/10 p-6 backdrop-blur-md space-y-4">
-            <div className="flex items-start justify-between">
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-white text-lg truncate">{p.product_name}</div>
-                <div className="text-sm text-white/70 mt-1">
-                  Serving: {p.serving_size_unit}
-                </div>
-                {p.barcode && (
-                  <div className="text-xs text-white/50 mt-1 font-mono">
-                    {p.barcode}
+        {data?.map((p: any) => {
+          const compound = Array.isArray(p.compounds) ? p.compounds[0] : p.compounds
+          const vendor = Array.isArray(p.vendors) ? p.vendors[0] : p.vendors
+          
+          return (
+            <Card key={p.id} className="rounded-xl border border-white/20 bg-white/10 p-6 backdrop-blur-md space-y-4">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-white text-lg truncate">{p.name_on_bottle}</div>
+                  <div className="text-sm text-white/70 mt-1">
+                    {vendor?.name}
                   </div>
-                )}
+                  <div className="text-sm text-white/60 mt-1">
+                    {compound?.full_name}
+                  </div>
+                  <div className="text-xs text-white/50 mt-2">
+                    {p.unit_dosage} {p.unit_measure} per {p.form_factor}
+                    {p.default_intake_form && ` · ${p.default_intake_form}`}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 ml-3">
+                  <button 
+                    onClick={() => handleDelete(p.id)}
+                    className="p-2 rounded-lg border border-white/20 bg-white/10 text-white/70 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/30 transition-colors"
+                    aria-label="Delete product"
+                    title="Remove from cabinet"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2 ml-3">
-                {p.is_public ? (
-                  <span className="text-xs rounded-full px-2 py-1 bg-green-500/20 text-green-300 border border-green-500/30">
-                    Public
-                  </span>
-                ) : (
-                  <span className="text-xs rounded-full px-2 py-1 bg-white/10 text-white/60 border border-white/20">
-                    Private
-                  </span>
-                )}
-                <button 
-                  onClick={() => handleDelete(p.id)}
-                  className="p-2 rounded-lg border border-white/20 bg-white/10 text-white/70 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/30 transition-colors"
-                  aria-label="Delete product"
-                  title="Remove from cabinet"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          )
+        })}
       </div>
 
       {showForm && (
-        <ProductForm
+        <AddProductWizard
           open={showForm}
           onOpenChange={setShowForm}
           onSaved={() => {

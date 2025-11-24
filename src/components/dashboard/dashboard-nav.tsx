@@ -35,7 +35,7 @@ export default function DashboardNav({ user }: DashboardNavProps) {
     { name: "Supplements", href: "/dashboard/supplements", icon: BarChart3 },
     { name: "Cabinet", href: "/dashboard/supplements/cabinet", icon: BarChart3 },
     { name: "Insights", href: "/dashboard/insights", icon: Brain },
-    { name: "Goals", href: "/dashboard/goals", icon: Target },
+    // { name: "Goals", href: "/dashboard/goals", icon: Target },
     { name: "Settings", href: "/dashboard/settings", icon: Settings },
   ];
 
@@ -51,7 +51,7 @@ export default function DashboardNav({ user }: DashboardNavProps) {
         <div className="flex h-16 justify-between">
           <div className="flex">
             <div className="flex flex-shrink-0 items-center">
-              <h1 className="text-xl font-bold text-white">OptiHealth</h1>
+              <h1 className="text-xl font-bold text-white">optiHealth</h1>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               {navigation.map((item) => {

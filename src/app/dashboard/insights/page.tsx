@@ -1,9 +1,18 @@
 "use client";
 
-import { Brain, TrendingUp, AlertCircle, Lightbulb, RefreshCw, Target, Plus } from "lucide-react";
+import { Brain, TrendingUp, AlertCircle, Lightbulb, RefreshCw, Target, Plus, Coffee } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import InsightCard from "@/components/insights/InsightCard";
+import { InsightCardProps } from "@/types/insight";
 
 interface Insight {
   id: number;
@@ -25,16 +34,54 @@ interface Goal {
   created_at: string;
 }
 
+interface Metric {
+  metric_name: string;
+  category: string;
+  beautiful_name: string;
+  default_unit: string;
+}
+
+// Fake insight data for demonstration
+const coffeeInsightData: InsightCardProps = {
+  icon: Coffee,
+  title: "Кофеин работает по-разному",
+  keyFinding: "Влиние вашей утренней чашки кофе на продуктивность сильно зависит от качества сна.",
+  scenarios: [
+    {
+      context: "Когда вы хорошо выспались: Дни, когда ваш показатель сна > 85",
+      action: "Вы пьете утренний кофе",
+      result: "Продуктивность +1.5 пункта",
+      resultType: "positive",
+    },
+    {
+      context: "Когда вы не выспались: Дни, когда ваш показатель сна < 65",
+      action: "Вы пьете утренний кофе, чтобы \"взбодриться\"",
+      result: "Продуктивность без изменений, но вечерний ВСР -10%",
+      resultType: "negative",
+    },
+  ],
+  verdict: "Ваш организм умен. Когда у вас достаточно ресурсов после хорошего сна, кофе работает как эффективный стимулятор продуктивности. Однако, когда вы не выспались, ваше тело, по-видимому, тратит больше ресурсов на переработку кофеина, что приводит к дополнительному стрессу для нервной системы (падение ВСР) без реального выигрыша в продуктивности.",
+  recommendation: "В дни плохого сна, стоит пропустить утренний кофе или заменить его на что-то более щадящее, например зеленый чай или просто на прогулку на свежем воздухе.",
+  howWeFoundIt: "Этот инсайт был найден с помощью векторного анализа, который сравнил между собой дни с похожим \"цифровым отпечатком\" (уровень стресса, активность), но разным качеством сна.",
+};
+
 export default function InsightsPage() {
   const supabase = createClient();
   const [insights, setInsights] = useState<Insight[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [metrics, setMetrics] = useState<Metric[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // Filter states
+  const [selectedMetric, setSelectedMetric] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<string>("30");
+  const [chartType, setChartType] = useState<string>("correlation");
 
   useEffect(() => {
     fetchInsights();
     fetchGoals();
+    fetchMetrics();
   }, []);
 
   const fetchInsights = async () => {
@@ -89,6 +136,14 @@ export default function InsightsPage() {
       }));
       setGoals(formattedGoals);
     }
+  };
+
+  const fetchMetrics = async () => {
+    const { data } = await supabase
+      .from('metric_definitions')
+      .select('metric_name, category, beautiful_name, default_unit')
+      .order('category, metric_name');
+    if (data) setMetrics(data);
   };
 
   const generateInsights = async () => {
@@ -169,6 +224,60 @@ export default function InsightsPage() {
         </div>
       </div>
 
+      {/* Filters */}
+      <div className="rounded-xl border border-white/20 bg-white/10 p-6 backdrop-blur-md">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-white">Primary Metric</label>
+            <Select value={selectedMetric} onValueChange={setSelectedMetric}>
+              <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                <SelectValue placeholder="Select metric" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Metrics</SelectItem>
+                {metrics.map((metric) => (
+                  <SelectItem key={metric.metric_name} value={metric.metric_name}>
+                    {metric.beautiful_name || metric.metric_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-white">Date Range</label>
+            <Select value={dateRange} onValueChange={setDateRange}>
+              <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                <SelectValue placeholder="Select range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Last 7 days</SelectItem>
+                <SelectItem value="30">Last 30 days</SelectItem>
+                <SelectItem value="90">Last 90 days</SelectItem>
+                <SelectItem value="180">Last 6 months</SelectItem>
+                <SelectItem value="365">Last year</SelectItem>
+                <SelectItem value="all">All time</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-white">Insight Type</label>
+            <Select value={chartType} onValueChange={setChartType}>
+              <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="correlation">Correlations</SelectItem>
+                <SelectItem value="trend">Trends</SelectItem>
+                <SelectItem value="anomaly">Anomalies</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+
       {/* Goals Section */}
       {goals.length > 0 && (
         <div className="rounded-xl border border-white/20 bg-white/10 p-6 backdrop-blur-md">
@@ -201,6 +310,38 @@ export default function InsightsPage() {
         </div>
       )}
 
+      {/* Featured Insight Card - Demo */}
+      <div className="mb-6">
+        <div className="mb-4 flex items-center gap-2">
+          <Lightbulb className="h-5 w-5 text-yellow-400" />
+          <h2 className="text-xl font-semibold text-white">Неочевидный паттерн</h2>
+          {/* <span className="text-xs text-white/50 bg-purple-500/30 px-2 py-1 rounded border border-purple-400/50">
+            DEMO: Everything is a Vector
+          </span> */}
+        </div>
+        <InsightCard {...coffeeInsightData} />
+      </div>
+
+      {/* Insights Count */}
+      {!loading && insights.length > 0 && (
+        <div className="flex items-center justify-between text-sm text-white/70">
+          <span>
+            Showing {insights.filter((insight) => {
+              if (chartType !== 'all' && insight.insight_type !== chartType) return false;
+              if (selectedMetric !== 'all' && insight.result_data?.primary_metric !== selectedMetric) return false;
+              if (dateRange !== 'all') {
+                const daysAgo = parseInt(dateRange);
+                const insightDate = new Date(insight.generated_at);
+                const cutoffDate = new Date();
+                cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
+                if (insightDate < cutoffDate) return false;
+              }
+              return true;
+            }).length} of {insights.length} insights
+          </span>
+        </div>
+      )}
+
       {/* Insights Grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {loading ? (
@@ -209,7 +350,23 @@ export default function InsightsPage() {
             <p className="text-white/70">Loading insights...</p>
           </div>
         ) : insights.length > 0 ? (
-          insights.map((insight) => {
+          insights
+            .filter((insight) => {
+              // Filter by insight type
+              if (chartType !== 'all' && insight.insight_type !== chartType) return false;
+              // Filter by metric (if metadata includes metric info)
+              if (selectedMetric !== 'all' && insight.result_data?.primary_metric !== selectedMetric) return false;
+              // Filter by date range
+              if (dateRange !== 'all') {
+                const daysAgo = parseInt(dateRange);
+                const insightDate = new Date(insight.generated_at);
+                const cutoffDate = new Date();
+                cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
+                if (insightDate < cutoffDate) return false;
+              }
+              return true;
+            })
+            .map((insight) => {
             const getInsightIcon = (type: string) => {
               switch (type) {
                 case 'correlation': return <Brain className="h-5 w-5 text-purple-400" />;
