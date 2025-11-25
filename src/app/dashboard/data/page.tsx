@@ -14,7 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { DateRange } from "react-day-picker";
-import { DataChart } from "@/components/dashboard/data-chart";
+import { TelegramChart } from "@/components/dashboard/telegram-chart";
+import { transformDataForTelegramChart } from "@/lib/telegram-chart/transformData";
 import { DataLogger } from "@/components/dashboard/data-logger";
 /* Lines 12-16 omitted */
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -391,11 +392,6 @@ export default function DataPage() {
     }, 250);
   };
 
-  const handleViewportReset = () => {
-    setViewportMin(undefined);
-    setViewportMax(undefined);
-  };
-
   // Calculate the step size based on the current range
   const getNavigationStep = () => {
     if (dayView) return 1; // 1 day for day view
@@ -525,87 +521,19 @@ export default function DataPage() {
     return metricDef?.beautiful_name || metricName;
   };
 
-  // Normalize data to 0-100 range for visual comparison
-  const normalizeData = (data: number[]) => {
-    if (data.length === 0) return [];
-    const min = Math.min(...data);
-    const max = Math.max(...data);
-    const range = max - min;
-    
-    if (range === 0) return data.map(() => 50); // All values are the same, center at 50
-    
-    return data.map(value => ((value - min) / range) * 100);
-  };
-
-  const formattedChartData = (
+  const telegramChartData = (
     () => {
-      const baseDataset = {
-        label: getMetricDisplayName(metric),
-        borderColor: 'rgba(54, 162, 235, 1)',
-        backgroundColor: 'rgba(54, 162, 235, 0.5)'
-      } as const;
-
-      // Scatter (non-compare): use time-based points for both day and multi-day
-      if (type === 'scatter' && !(compareMode && metric2)) {
-        return {
-          datasets: [
-            {
-              ...baseDataset,
-              data: chartData.map(d => ({ x: new Date(d.bucket).getTime(), y: d.value })),
-            }
-          ]
-        };
-      }
-
-      // line/bar default, including multi-day and dayView non-scatter
-      const labels = chartData.map(d => new Date(d.bucket));
-      const rawData1 = chartData.map(d => d.value);
-      const rawData2 = chartData2.map(d => d.value);
-      
-      // Check if normalization is needed and enabled
-      const shouldNormalize = compareMode && metric2 && chartData2.length > 0 && normalizeCompare;
-      
-      const datasets = [
-        {
-          ...baseDataset,
-          data: shouldNormalize ? normalizeData(rawData1) : rawData1,
-          label: shouldNormalize 
-            ? `${getMetricDisplayName(metric)} (normalized)`
-            : getMetricDisplayName(metric),
-        } as const,
-      ];
-
-      if (compareMode && metric2 && chartData2.length > 0) {
-        datasets.push({
-          label: shouldNormalize 
-            ? `${getMetricDisplayName(metric2)} (normalized)`
-            : getMetricDisplayName(metric2),
-          data: shouldNormalize ? normalizeData(rawData2) : rawData2,
-          borderColor: 'rgba(255, 99, 132, 1)',
-          backgroundColor: 'rgba(255, 99, 132, 0.5)'
-        } as any);
-      }
-
-      return { labels, datasets };
+      return transformDataForTelegramChart(
+        chartData,
+        getMetricDisplayName(metric),
+        compareMode && metric2 ? chartData2 : null,
+        compareMode && metric2 ? getMetricDisplayName(metric2) : null,
+        type as 'line' | 'bar' | 'area' | 'scatter',
+        Boolean(compareMode && metric2 && normalizeCompare)
+      );
     }
   )();
 
-  const scatterData = {
-    datasets: compareMode && metric2 && chartData.length > 0 && chartData2.length > 0 ? [
-      {
-        label: `${getMetricDisplayName(metric)} vs ${getMetricDisplayName(metric2)}`,
-        data: chartData.map((point) => {
-          const correspondingPoint = chartData2.find(p => p.bucket === point.bucket);
-          return correspondingPoint ? {
-            x: point.value,
-            y: correspondingPoint.value
-          } : null;
-        }).filter((point): point is { x: number; y: number } => point !== null),
-        borderColor: 'rgba(75, 192, 192, 1)',
-        backgroundColor: 'rgba(75, 192, 192, 0.6)',
-      }
-    ] : [],
-  };
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -838,11 +766,10 @@ export default function DataPage() {
       {/* Chart Area */}
       <div className="rounded-xl border border-white/20 bg-white/10 p-6 backdrop-blur-md">
         {chartData.length > 0 ? (
-          type === 'scatter' && compareMode && metric2 && scatterData.datasets.length > 0 ? (
-            <DataChart chartData={scatterData} chartType="scatter" scatterXScale="linear" externalMin={viewportMin} externalMax={viewportMax} onViewportChange={handleViewportChange} onViewportReset={handleViewportReset} />
-          ) : (
-            <DataChart chartData={formattedChartData} chartType={type as 'line' | 'bar' | 'scatter'} dayView={dayView} minTime={minTime} maxTime={maxTime} scatterXScale={type === 'scatter' ? 'time' : undefined} externalMin={viewportMin} externalMax={viewportMax} onViewportChange={handleViewportChange} onViewportReset={handleViewportReset} />
-          )
+            <TelegramChart
+                data={telegramChartData}
+                onViewportChange={handleViewportChange}
+            />
         ) : (
           <div className="flex items-center justify-center h-96 text-white/50">
             <div className="text-center">
