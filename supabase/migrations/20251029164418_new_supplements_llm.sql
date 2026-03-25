@@ -84,9 +84,6 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION public.add_new_product IS 
-  'Creates a new product, automatically finding or creating the vendor. Atomic operation for the Add Product Wizard.';
-
 COMMIT;
 
 -- ====================================================================================
