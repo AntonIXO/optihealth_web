@@ -525,6 +525,26 @@ export default function DataPage() {
     return metricDef?.beautiful_name || metricName;
   };
 
+  const getMetricUnit = (metricName: string) => {
+    const metricDef = metrics.find(m => m.metric_name === metricName);
+    return metricDef?.default_unit || 'N/A';
+  };
+
+  const isMinutesUnit = (unit: string | undefined) => {
+    if (!unit) return false;
+    const normalized = unit.toLowerCase();
+    return normalized === 'minutes' || normalized === 'minute' || normalized === 'min';
+  };
+
+  const metricUnit = getMetricUnit(metric);
+  const metric2Unit = getMetricUnit(metric2);
+  const metricShownInHours = isMinutesUnit(metricUnit);
+  const metric2ShownInHours = isMinutesUnit(metric2Unit);
+
+  const convertForDisplay = (value: number, showAsHours: boolean) => (showAsHours ? value / 60 : value);
+  const formatDisplayValue = (value: number, showAsHours: boolean) => convertForDisplay(value, showAsHours).toFixed(2);
+  const getDisplayUnit = (unit: string) => (isMinutesUnit(unit) ? 'hr' : unit);
+
   // Normalize data to 0-100 range for visual comparison
   const normalizeData = (data: number[]) => {
     if (data.length === 0) return [];
@@ -551,7 +571,7 @@ export default function DataPage() {
           datasets: [
             {
               ...baseDataset,
-              data: chartData.map(d => ({ x: new Date(d.bucket).getTime(), y: d.value })),
+              data: chartData.map(d => ({ x: new Date(d.bucket).getTime(), y: convertForDisplay(d.value, metricShownInHours) })),
             }
           ]
         };
@@ -559,8 +579,8 @@ export default function DataPage() {
 
       // line/bar default, including multi-day and dayView non-scatter
       const labels = chartData.map(d => new Date(d.bucket));
-      const rawData1 = chartData.map(d => d.value);
-      const rawData2 = chartData2.map(d => d.value);
+      const rawData1 = chartData.map(d => convertForDisplay(d.value, metricShownInHours));
+      const rawData2 = chartData2.map(d => convertForDisplay(d.value, metric2ShownInHours));
       
       // Check if normalization is needed and enabled
       const shouldNormalize = compareMode && metric2 && chartData2.length > 0 && normalizeCompare;
@@ -597,8 +617,8 @@ export default function DataPage() {
         data: chartData.map((point) => {
           const correspondingPoint = chartData2.find(p => p.bucket === point.bucket);
           return correspondingPoint ? {
-            x: point.value,
-            y: correspondingPoint.value
+            x: convertForDisplay(point.value, metricShownInHours),
+            y: convertForDisplay(correspondingPoint.value, metric2ShownInHours)
           } : null;
         }).filter((point): point is { x: number; y: number } => point !== null),
         borderColor: 'rgba(75, 192, 192, 1)',
@@ -957,15 +977,15 @@ export default function DataPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="rounded-lg border border-white/10 bg-white/5 p-4">
               <div className="text-white/70 text-sm">Average</div>
-              <div className="text-white text-2xl font-semibold mt-1">{summary.avg_val !== null ? summary.avg_val.toFixed(2) : '—'}</div>
+              <div className="text-white text-2xl font-semibold mt-1">{summary.avg_val !== null ? formatDisplayValue(summary.avg_val, metricShownInHours) : '—'}</div>
             </div>
             <div className="rounded-lg border border-white/10 bg-white/5 p-4">
               <div className="text-white/70 text-sm">Minimum</div>
-              <div className="text-white text-2xl font-semibold mt-1">{summary.min_val !== null ? summary.min_val.toFixed(2) : '—'}</div>
+              <div className="text-white text-2xl font-semibold mt-1">{summary.min_val !== null ? formatDisplayValue(summary.min_val, metricShownInHours) : '—'}</div>
             </div>
             <div className="rounded-lg border border-white/10 bg-white/5 p-4">
               <div className="text-white/70 text-sm">Maximum</div>
-              <div className="text-white text-2xl font-semibold mt-1">{summary.max_val !== null ? summary.max_val.toFixed(2) : '—'}</div>
+              <div className="text-white text-2xl font-semibold mt-1">{summary.max_val !== null ? formatDisplayValue(summary.max_val, metricShownInHours) : '—'}</div>
             </div>
             <div className="rounded-lg border border-white/10 bg-white/5 p-4">
               <div className="text-white/70 text-sm">Count</div>
@@ -1002,9 +1022,9 @@ export default function DataPage() {
                         {dayView ? new Date(row.bucket).toLocaleString() : new Date(row.bucket).toLocaleDateString()}
                       </td>
                       <td className="py-3 px-4 text-white/90">{getMetricDisplayName(metric)}</td>
-                      <td className="py-3 px-4 text-white/90">{row.value.toFixed(2)}</td>
+                      <td className="py-3 px-4 text-white/90">{formatDisplayValue(row.value, metricShownInHours)}</td>
                       <td className="py-3 px-4 text-white/90">
-                        {metrics.find(m => m.metric_name === metric)?.default_unit || 'N/A'}
+                        {getDisplayUnit(metricUnit)}
                       </td>
                       <td className="py-3 px-4">
                         <button

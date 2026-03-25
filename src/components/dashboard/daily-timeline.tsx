@@ -42,10 +42,19 @@ interface GroupedMetric {
 interface DailySummaryStats {
   steps_today: number;
   resting_hr: number | null;
-  sleep_score: number | null;
   events_count: number;
   metrics_logged: number;
 }
+
+const isMinutesUnit = (unit: string | null | undefined) => {
+  if (!unit) return false;
+  const normalized = unit.toLowerCase();
+  return normalized === "minutes" || normalized === "minute" || normalized === "min";
+};
+
+const minutesToHours = (minutes: number) => minutes / 60;
+
+const formatHours = (hours: number) => `${hours.toFixed(2)} hr`;
 
 const getIconForCategory = (itemType: string, category: string) => {
   switch (itemType) {
@@ -99,6 +108,7 @@ export function DailyTimeline() {
   const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
   const [groupedMetrics, setGroupedMetrics] = useState<GroupedMetric[]>([]);
   const [summaryStats, setSummaryStats] = useState<DailySummaryStats | null>(null);
+  const [deepSleepHours, setDeepSleepHours] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -131,14 +141,15 @@ export function DailyTimeline() {
       if (items.length > 10) {
         // Create grouped metric for chart display
         const firstItem = items[0];
+        const useHours = isMinutesUnit(firstItem.unit);
         grouped.push({
           title: firstItem.title,
           category: firstItem.category,
-          unit: firstItem.unit,
+          unit: useHours ? 'hr' : firstItem.unit,
           item_type: firstItem.item_type,
           data: items.map(item => ({
             timestamp: item.timestamp_value,
-            value: item.value_numeric!,
+            value: useHours ? minutesToHours(item.value_numeric!) : item.value_numeric!,
           })).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()),
           firstTimestamp: items.sort((a, b) => 
             new Date(a.timestamp_value).getTime() - new Date(b.timestamp_value).getTime()
@@ -176,6 +187,17 @@ export function DailyTimeline() {
         return;
       }
 
+      const timelineItemsRaw = (timeline || []) as TimelineItem[];
+      const deepSleepMinutes = timelineItemsRaw
+        .filter(item =>
+          item.item_type === 'metric' &&
+          item.value_numeric !== null &&
+          isMinutesUnit(item.unit) &&
+          item.title.toLowerCase().includes('deep sleep')
+        )
+        .reduce((sum, item) => sum + (item.value_numeric || 0), 0);
+      setDeepSleepHours(deepSleepMinutes > 0 ? minutesToHours(deepSleepMinutes) : null);
+
       // Fetch summary stats
       const { data: stats, error: statsError } = await supabase
         .rpc('get_daily_summary_stats', { 
@@ -187,7 +209,7 @@ export function DailyTimeline() {
       }
 
       // Group timeline items
-      const { grouped, remainingItems } = groupTimelineItems(timeline || []);
+      const { grouped, remainingItems } = groupTimelineItems(timelineItemsRaw);
       
       setGroupedMetrics(grouped);
       setTimelineItems(remainingItems);
@@ -301,10 +323,10 @@ export function DailyTimeline() {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-white/70 truncate">
-                    Sleep Score
+                    Deep Sleep Hours
                   </dt>
                   <dd className="text-2xl font-semibold text-white">
-                    {summaryStats.sleep_score ? Math.round(summaryStats.sleep_score) : '--'}
+                    {deepSleepHours !== null ? formatHours(deepSleepHours) : '--'}
                   </dd>
                 </dl>
               </div>
@@ -422,7 +444,9 @@ export function DailyTimeline() {
                         {item.title}
                       </h3>
                       <p className="text-white/70 text-sm mt-1">
-                        {item.description}
+                        {item.item_type === 'metric' && item.value_numeric !== null && isMinutesUnit(item.unit)
+                          ? formatHours(minutesToHours(item.value_numeric))
+                          : item.description}
                       </p>
                       {item.item_type === 'metric' && item.category && (
                         <span className="inline-block px-2 py-1 text-xs bg-white/10 text-white/60 rounded mt-2">
