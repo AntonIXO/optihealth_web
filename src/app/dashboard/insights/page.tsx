@@ -41,28 +41,28 @@ interface Metric {
   default_unit: string;
 }
 
-// Fake insight data for demonstration
+// Demo insight card showing how insights should look
 const coffeeInsightData: InsightCardProps = {
   icon: Coffee,
-  title: "Кофеин работает по-разному",
-  keyFinding: "Влиние вашей утренней чашки кофе на продуктивность сильно зависит от качества сна.",
+  title: "Caffeine Works Differently",
+  keyFinding: "How your morning cup of coffee affects productivity strongly depends on sleep quality.",
   scenarios: [
     {
-      context: "Когда вы хорошо выспались: Дни, когда ваш показатель сна > 85",
-      action: "Вы пьете утренний кофе",
-      result: "Продуктивность +1.5 пункта",
+      context: "When you slept well: Days when your sleep score > 85",
+      action: "You drink morning coffee",
+      result: "Productivity +1.5 points",
       resultType: "positive",
     },
     {
-      context: "Когда вы не выспались: Дни, когда ваш показатель сна < 65",
-      action: "Вы пьете утренний кофе, чтобы \"взбодриться\"",
-      result: "Продуктивность без изменений, но вечерний ВСР -10%",
+      context: "When you didn't sleep well: Days when your sleep score < 65",
+      action: "You drink morning coffee to \"perk up\"",
+      result: "Productivity unchanged, but evening HRV -10%",
       resultType: "negative",
     },
   ],
-  verdict: "Ваш организм умен. Когда у вас достаточно ресурсов после хорошего сна, кофе работает как эффективный стимулятор продуктивности. Однако, когда вы не выспались, ваше тело, по-видимому, тратит больше ресурсов на переработку кофеина, что приводит к дополнительному стрессу для нервной системы (падение ВСР) без реального выигрыша в продуктивности.",
-  recommendation: "В дни плохого сна, стоит пропустить утренний кофе или заменить его на что-то более щадящее, например зеленый чай или просто на прогулку на свежем воздухе.",
-  howWeFoundIt: "Этот инсайт был найден с помощью векторного анализа, который сравнил между собой дни с похожим \"цифровым отпечатком\" (уровень стресса, активность), но разным качеством сна.",
+  verdict: "Your body is smart. When you have enough resources after good sleep, coffee works as an effective productivity stimulant. However, when you haven't slept well, your body appears to spend more resources processing caffeine, leading to additional stress on your nervous system (HRV decline) without real productivity gains.",
+  recommendation: "On days of poor sleep, it's worth skipping morning coffee or replacing it with something gentler, like green tea or simply a walk in fresh air.",
+  howWeFoundIt: "This insight was discovered using vector analysis, which compared days with similar 'digital signatures' (stress level, activity) but different sleep quality.",
 };
 
 export default function InsightsPage() {
@@ -314,10 +314,10 @@ export default function InsightsPage() {
       <div className="mb-6">
         <div className="mb-4 flex items-center gap-2">
           <Lightbulb className="h-5 w-5 text-yellow-400" />
-          <h2 className="text-xl font-semibold text-white">Неочевидный паттерн</h2>
-          {/* <span className="text-xs text-white/50 bg-purple-500/30 px-2 py-1 rounded border border-purple-400/50">
-            DEMO: Everything is a Vector
-          </span> */}
+          <h2 className="text-xl font-semibold text-white">Example Insight</h2>
+          <span className="text-xs text-white/50 bg-purple-500/30 px-2 py-1 rounded border border-purple-400/50">
+            DEMO
+          </span>
         </div>
         <InsightCard {...coffeeInsightData} />
       </div>
