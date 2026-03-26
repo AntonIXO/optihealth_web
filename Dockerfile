@@ -1,6 +1,6 @@
 # Use the official Bun image
 # Pin a version for reproducibility (adjust as needed)
-FROM oven/bun:1.1.34 AS base
+FROM oven/bun:latest AS base
 WORKDIR /usr/src/app
 
 # Install dependencies into temp directories to leverage caching

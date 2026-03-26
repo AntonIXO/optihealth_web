@@ -25,7 +25,7 @@ export default function InsightCard({
 
       {/* Analysis Label */}
       <div className="mt-6 mb-2">
-        <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wide">🔬 Анализ:</h3>
+        <h3 className="text-sm font-semibold text-white/70 uppercase tracking-wide">🔬 Analysis:</h3>
       </div>
 
       {/* Scenarios */}
@@ -33,7 +33,7 @@ export default function InsightCard({
         {scenarios.map((scenario, index) => (
           <div key={index}>
             <h4 className="text-sm font-medium text-white/80 mb-1">
-              Сценарий {String.fromCharCode(65 + index)}: {scenario.context.split(':')[0]}
+              Scenario {String.fromCharCode(65 + index)}: {scenario.context.split(':')[0]}
             </h4>
             <Scenario {...scenario} />
           </div>
@@ -43,11 +43,11 @@ export default function InsightCard({
       {/* Verdict & Recommendation */}
       <div className="mt-6 rounded-lg bg-white/5 p-4 border border-white/10">
         <h3 className="font-semibold text-white mb-2 flex items-center gap-2">
-          🧠 Вердикт и рекомендация:
+          🧠 Verdict and Recommendation:
         </h3>
         <p className="text-white/80 text-sm leading-relaxed mb-3">{verdict}</p>
         <p className="text-white/90 text-sm leading-relaxed font-medium">
-          <span className="text-green-400">💡 Совет:</span> {recommendation}
+          <span className="text-green-400">💡 Advice:</span> {recommendation}
         </p>
       </div>
 
