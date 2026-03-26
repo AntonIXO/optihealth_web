@@ -8,6 +8,7 @@ type Provider = "google" | "github" | "x";
 
 type Props = {
   triggerLabel?: string;
+  triggerClassName?: string;
   initialMode?: "login" | "signup";
   onLogin?: (payload: { email: string; password: string }) => Promise<void> | void;
   onSignup?: (payload: { name: string; email: string; password: string }) => Promise<void> | void;
@@ -18,6 +19,7 @@ type Props = {
 
 export default function GlassAuthModal({
   triggerLabel = "Open Auth Modal",
+  triggerClassName,
   initialMode = "login",
   onLogin,
   onSignup,
@@ -107,8 +109,8 @@ export default function GlassAuthModal({
       <button
         type="button"
         onClick={handleOpen}
-        className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-black shadow-sm backdrop-blur-md dark:text-white transition hover:bg-white/15 active:scale-[0.98] dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10
-        light:border-blue-300/50 light:bg-blue-100/30 light:text-blue-900 light:hover:bg-blue-100/50"
+        className={`inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-black shadow-sm backdrop-blur-md dark:text-white transition hover:bg-white/15 active:scale-[0.98] dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10
+        light:border-blue-300/50 light:bg-blue-100/30 light:text-blue-900 light:hover:bg-blue-100/50 ${triggerClassName ?? ""}`}
       >
         {triggerLabel}
       </button>

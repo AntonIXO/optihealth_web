@@ -1,8 +1,12 @@
 "use client";
+
 import dynamic from "next/dynamic";
 
-const ClientAuth = dynamic(() => import("./client-auth"), { ssr: false });
+const FeaturesShowcasePage = dynamic(
+  () => import("@/components/landing/features-showcase-page"),
+  { ssr: false },
+);
 
 export default function LoginPage() {
-  return <ClientAuth />;
+  return <FeaturesShowcasePage />;
 }

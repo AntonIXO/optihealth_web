@@ -9,6 +9,7 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const isAuthExemptPath =
     pathname.startsWith('/login') ||
+    pathname.startsWith('/demo') ||
     pathname.startsWith('/auth') ||
     pathname.startsWith('/error')
 
