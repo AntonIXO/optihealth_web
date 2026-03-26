@@ -6,9 +6,19 @@ export async function updateSession(request: NextRequest) {
     request,
   })
 
+  const pathname = request.nextUrl.pathname
+  const isAuthExemptPath =
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/error')
+
+  if (isAuthExemptPath) {
+    return supabaseResponse
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
@@ -33,15 +43,42 @@ export async function updateSession(request: NextRequest) {
 
   // IMPORTANT: DO NOT REMOVE auth.getUser()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user'] = null
+  let authTimeout: ReturnType<typeof setTimeout> | undefined
+
+  try {
+    const authResult = await Promise.race([
+      supabase.auth.getUser(),
+      new Promise<never>((_, reject) => {
+        authTimeout = setTimeout(() => {
+          reject(new Error('Supabase auth check timed out in middleware'))
+        }, 8000)
+      }),
+    ])
+
+    user = authResult.data.user
+  } catch (error) {
+    console.error('[middleware] Failed to resolve Supabase user', {
+      pathname,
+      message: error instanceof Error ? error.message : String(error),
+    })
+
+    if (!isAuthExemptPath) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
+    }
+
+    return supabaseResponse
+  } finally {
+    if (authTimeout) {
+      clearTimeout(authTimeout)
+    }
+  }
 
   if (
     !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/auth') &&
-    !request.nextUrl.pathname.startsWith('/error')
+    !isAuthExemptPath
   ) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone()

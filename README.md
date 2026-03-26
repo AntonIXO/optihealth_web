@@ -278,6 +278,17 @@ bun run build
 bun run start
 ```
 
+### Running with Docker
+
+```bash
+# IMPORTANT: use --env-file so build args are populated during image build
+docker compose --env-file .env.local up -d --build
+```
+
+Without `--env-file .env.local`, Docker Compose can start the container with runtime env values from `env_file`, but `build.args` may stay empty during image build.
+
+For this project that means Supabase public vars can be missing at build time, which can lead to broken auth/runtime behavior.
+
 ## Usage Guide
 
 ### 1. Authentication
