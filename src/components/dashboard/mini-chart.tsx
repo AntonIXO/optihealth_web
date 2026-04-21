@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -36,6 +36,18 @@ interface MiniChartProps {
 
 export function MiniChart({ data, title, unit = "", color = "#60a5fa" }: MiniChartProps) {
   const chartRef = useRef<ChartJS<"line">>(null);
+
+  const { min, max } = useMemo(() => {
+    if (data.length === 0) return { min: 0, max: 0 };
+    let minVal = data[0].value;
+    let maxVal = data[0].value;
+    for (let i = 1; i < data.length; i++) {
+      const v = data[i].value;
+      if (v < minVal) minVal = v;
+      if (v > maxVal) maxVal = v;
+    }
+    return { min: minVal, max: maxVal };
+  }, [data]);
 
   const chartData = {
     labels: data.map(item => {
@@ -125,7 +137,7 @@ export function MiniChart({ data, title, unit = "", color = "#60a5fa" }: MiniCha
         <span className="text-xs text-white/60">
           {data.length > 0 && (
             <>
-              {Math.min(...data.map(d => d.value)).toFixed(1)} - {Math.max(...data.map(d => d.value)).toFixed(1)} {unit}
+              {min.toFixed(1)} - {max.toFixed(1)} {unit}
             </>
           )}
         </span>
