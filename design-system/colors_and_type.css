@@ -1,0 +1,309 @@
+/* ============================================================================
+   optiHealth Design System — Colors & Type
+   Two products, two visual languages sharing a brand spine:
+     - Web  (Next.js / Tailwind v4) — "Liquid glass" on a deep indigo gradient
+     - Android (Jetpack Compose) — Material Design 3, green-forward
+   Source files:
+     - optihealth_web/src/app/globals.css  (shadcn/radix tokens in oklch)
+     - optihealth_android/ui/theme/Color.kt (MD3 tonal palette)
+     - optihealth_android/ui/theme/Type.kt (MD3 type scale)
+   ============================================================================ */
+
+:root {
+  /* ---------- BRAND SPINE ---------------------------------------------------
+     The wordmark sketch ("optiHealth") and logo mark suggest a clinical,
+     minimal brand. Web leans cool blue/indigo; Android leans healing green.
+     ------------------------------------------------------------------------- */
+  --brand-indigo-900: #1e1b4b;    /* web bg start (tailwind indigo-900) */
+  --brand-purple-900: #581c87;    /* web bg mid */
+  --brand-blue-900:   #1e3a8a;    /* web bg end */
+  --brand-blue-400:   #60a5fa;    /* active nav, icon accent */
+  --brand-purple-400: #c084fc;    /* gradient text partner */
+  --brand-green:      #006C51;    /* android primary — healing green */
+  --brand-green-soft: #8FF8D3;    /* android primary container */
+  --brand-ink:        #191C1A;    /* android onBackground, wordmark ink */
+
+
+  /* ---------- WEB PALETTE (liquid glass on indigo gradient) -----------------
+     Mirrors optihealth_web/src/app/globals.css (oklch → hex equivalents).
+     The bg is a fixed 3-stop radial/linear gradient; surfaces float on top
+     with white/10, backdrop-blur-md, and a thin white/20 border.
+     ------------------------------------------------------------------------- */
+  --web-bg-from: #1e3a8a;                   /* from-blue-900 */
+  --web-bg-via:  #581c87;                   /* via-purple-900 */
+  --web-bg-to:   #312e81;                   /* to-indigo-900 */
+  --web-bg-wash: linear-gradient(135deg, var(--web-bg-from) 0%, var(--web-bg-via) 50%, var(--web-bg-to) 100%);
+
+  /* Surfaces — all translucent, all blurred */
+  --web-glass:          rgba(255,255,255,0.10);    /* standard glass card */
+  --web-glass-hover:    rgba(255,255,255,0.15);    /* hover state */
+  --web-glass-strong:   rgba(255,255,255,0.20);    /* primary CTA glass */
+  --web-glass-subtle:   rgba(255,255,255,0.05);    /* nav bar, subtle panels */
+  --web-glass-border:   rgba(255,255,255,0.20);    /* default glass border */
+  --web-glass-border-2: rgba(255,255,255,0.10);    /* muted glass border */
+  --web-glass-topline:  rgba(255,255,255,0.40);    /* top-edge highlight (1px) */
+
+  /* Foreground on dark glass */
+  --web-fg:        #ffffff;
+  --web-fg-muted:  rgba(255,255,255,0.80);
+  --web-fg-subtle: rgba(255,255,255,0.70);
+  --web-fg-faint:  rgba(255,255,255,0.50);
+
+  /* Lucide-coded feature accents (from features-showcase-page.tsx) */
+  --web-accent-blue:   #60a5fa;   /* Activity  — Comprehensive Tracking */
+  --web-accent-purple: #c084fc;   /* Brain     — AI Insights */
+  --web-accent-green:  #4ade80;   /* TrendingUp — Analytics */
+  --web-accent-red:    #f87171;   /* Heart     — Holistic */
+  --web-accent-yellow: #facc15;   /* Shield    — Privacy */
+  --web-accent-orange: #fb923c;   /* Zap       — Real-time */
+
+  /* Chart palette (from oklch chart-1..5) — vibrant against glass */
+  --web-chart-1: #e07856;
+  --web-chart-2: #4ea8a0;
+  --web-chart-3: #2c5a7a;
+  --web-chart-4: #e0b04a;
+  --web-chart-5: #d49a4a;
+
+  /* Destructive / status */
+  --web-destructive: #e25555;
+  --web-success:     #4ade80;
+
+  /* Blur & radii — glass is defined by its blur + border + rounding */
+  --web-blur-sm: blur(6px);
+  --web-blur-md: blur(12px);
+  --web-blur-lg: blur(24px);
+  --web-blur-xl: blur(40px);
+  --web-radius-sm: 6px;      /* inputs, small chips */
+  --web-radius-md: 10px;     /* buttons, cards in nav */
+  --web-radius-lg: 12px;     /* most buttons & pills */
+  --web-radius-xl: 16px;     /* panels, feature cards */
+  --web-radius-2xl: 24px;    /* auth modal, large surfaces */
+
+  /* Shadows — soft, diffused; never heavy */
+  --web-shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05);
+  --web-shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.25), 0 10px 10px -5px rgba(0,0,0,0.10);
+  --web-shadow-2xl: 0 25px 50px -12px rgba(0,0,0,0.45);
+
+
+  /* ---------- ANDROID PALETTE (Material Design 3 — blue-indigo, as-shipped) -
+     Measured from live screenshots (Apr 2026). The in-repo Color.kt defines a
+     green-forward palette but the app in production runs the default-blue MD3
+     scheme with dynamic color; sampled values below reflect reality.
+     ------------------------------------------------------------------------- */
+  /* Light scheme */
+  --md-primary: #465A9E;                   /* indigo-blue from "Sync All Health Data" */
+  --md-on-primary: #FFFFFF;
+  --md-primary-container: #DDE1F9;         /* lavender card fill + inner rows */
+  --md-on-primary-container: #001A43;
+  --md-secondary: #5A5D72;                 /* muted blue-grey */
+  --md-on-secondary: #FFFFFF;
+  --md-secondary-container: #DFE1F9;
+  --md-on-secondary-container: #171B2C;
+  --md-tertiary: #76536B;
+  --md-on-tertiary: #FFFFFF;
+  --md-tertiary-container: #FFD8EE;
+  --md-on-tertiary-container: #2D1126;
+  --md-error: #BA1A1A;
+  --md-on-error: #FFFFFF;
+  --md-error-container: #FFDAD6;
+  --md-on-error-container: #410002;
+  --md-background: #F3F1F9;                /* lavender-tinted page */
+  --md-on-background: #1B1B1F;
+  --md-surface: #F3F1F9;
+  --md-on-surface: #1B1B1F;
+  --md-surface-variant: #E4E1EC;           /* soft grey card surface */
+  --md-on-surface-variant: #47464F;
+  --md-outline: #787680;
+
+  /* Dark scheme */
+  --md-primary-dark: #72DBB7;
+  --md-on-primary-dark: #003828;
+  --md-primary-container-dark: #00513C;
+  --md-on-primary-container-dark: #8FF8D3;
+  --md-secondary-dark: #B2CDBE;
+  --md-on-secondary-dark: #1F352A;
+  --md-secondary-container-dark: #354B40;
+  --md-on-secondary-container-dark: #CEE9DA;
+  --md-tertiary-dark: #A5CCDF;
+  --md-on-tertiary-dark: #063544;
+  --md-tertiary-container-dark: #244C5B;
+  --md-on-tertiary-container-dark: #C1E8FC;
+  --md-error-dark: #FFB4AB;
+  --md-on-error-dark: #690005;
+  --md-background-dark: #191C1A;
+  --md-on-background-dark: #E1E3DF;
+  --md-surface-dark: #191C1A;
+  --md-on-surface-dark: #E1E3DF;
+  --md-surface-variant-dark: #404943;
+  --md-on-surface-variant-dark: #C0C9C1;
+  --md-outline-dark: #8A938C;
+
+  /* MD3 state layers (apply over surface) */
+  --md-state-hover:   rgba(0, 108, 81, 0.08);
+  --md-state-focus:   rgba(0, 108, 81, 0.12);
+  --md-state-pressed: rgba(0, 108, 81, 0.12);
+
+  /* MD3 shape tokens (from the codebase — mostly 8dp cards) */
+  --md-shape-xs: 4px;
+  --md-shape-sm: 8px;    /* default Card shape in HomeScreen.kt */
+  --md-shape-md: 12px;
+  --md-shape-lg: 16px;
+  --md-shape-xl: 28px;   /* bottom-sheet, FAB */
+
+  /* MD3 elevation */
+  --md-elev-1: 0 1px 2px rgba(0,0,0,0.12);
+  --md-elev-2: 0 1px 2px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.08);
+  --md-elev-3: 0 1px 3px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.10);
+
+
+  /* ---------- TYPOGRAPHY ---------------------------------------------------
+     Web: Geist Sans / Geist Mono (from next/font/google, layout.tsx).
+     Android: FontFamily.Default (Roboto) with full MD3 scale (Type.kt).
+     ------------------------------------------------------------------------- */
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+               Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, "SF Mono",
+               Menlo, Consolas, "Liberation Mono", monospace;
+  --font-android: "Roboto", "Roboto Flex", system-ui, sans-serif;
+
+  /* Web scale (Tailwind default — what the codebase actually ships with) */
+  --text-xs: 12px;     --leading-xs: 16px;
+  --text-sm: 14px;     --leading-sm: 20px;
+  --text-base: 16px;   --leading-base: 24px;
+  --text-lg: 18px;     --leading-lg: 28px;
+  --text-xl: 20px;     --leading-xl: 28px;
+  --text-2xl: 24px;    --leading-2xl: 32px;
+  --text-3xl: 30px;    --leading-3xl: 36px;
+  --text-4xl: 36px;    --leading-4xl: 40px;
+  --text-6xl: 60px;    --leading-6xl: 60px;   /* hero on landing */
+
+  /* Android MD3 scale — sp rendered as px for the web specimen */
+  --md-display-lg: 57px;   --md-display-lg-lh: 64px;   --md-display-lg-tr: -0.25px;
+  --md-display-md: 45px;   --md-display-md-lh: 52px;
+  --md-display-sm: 36px;   --md-display-sm-lh: 44px;
+  --md-headline-lg: 32px;  --md-headline-lg-lh: 40px;
+  --md-headline-md: 28px;  --md-headline-md-lh: 36px;
+  --md-headline-sm: 24px;  --md-headline-sm-lh: 32px;
+  --md-title-lg: 22px;     --md-title-lg-lh: 28px;
+  --md-title-md: 16px;     --md-title-md-lh: 24px;
+  --md-title-sm: 14px;     --md-title-sm-lh: 20px;
+  --md-body-lg: 16px;      --md-body-lg-lh: 24px;
+  --md-body-md: 14px;      --md-body-md-lh: 20px;
+  --md-body-sm: 12px;      --md-body-sm-lh: 16px;
+  --md-label-lg: 14px;     --md-label-lg-lh: 20px;
+  --md-label-md: 12px;     --md-label-md-lh: 16px;
+  --md-label-sm: 11px;     --md-label-sm-lh: 16px;
+
+
+  /* ---------- SEMANTIC ALIASES (cross-product) ----------------------------
+     Use these in new components when you don't want to pick a platform.
+     Defaults to the web (glass) world — override inside .md3 scope.
+     ----------------------------------------------------------------------- */
+  --fg-1: var(--web-fg);
+  --fg-2: var(--web-fg-muted);
+  --fg-3: var(--web-fg-subtle);
+  --fg-4: var(--web-fg-faint);
+  --bg-page: var(--web-bg-wash);
+  --surface-1: var(--web-glass);
+  --surface-2: var(--web-glass-strong);
+  --border-1: var(--web-glass-border);
+  --radius: var(--web-radius-xl);
+  --accent: var(--web-accent-blue);
+}
+
+/* Scope for using Material Design 3 (android) tokens on a page */
+.md3 {
+  --fg-1: var(--md-on-background);
+  --fg-2: var(--md-on-surface-variant);
+  --fg-3: var(--md-outline);
+  --bg-page: var(--md-background);
+  --surface-1: var(--md-surface);
+  --surface-2: var(--md-surface-variant);
+  --border-1: var(--md-outline);
+  --radius: var(--md-shape-sm);
+  --accent: var(--md-primary);
+
+  background: var(--bg-page);
+  color: var(--fg-1);
+  font-family: var(--font-android);
+}
+
+.md3.dark {
+  --fg-1: var(--md-on-background-dark);
+  --fg-2: var(--md-on-surface-variant-dark);
+  --bg-page: var(--md-background-dark);
+  --surface-1: var(--md-surface-dark);
+  --surface-2: var(--md-surface-variant-dark);
+  --accent: var(--md-primary-dark);
+}
+
+
+/* ---------- SEMANTIC TYPE CLASSES -----------------------------------------
+   Drop these on any element instead of re-specifying sizes.
+   ------------------------------------------------------------------------- */
+.t-hero          { font: 700 var(--text-6xl)/var(--leading-6xl) var(--font-sans); letter-spacing:-0.02em; }
+.t-h1            { font: 700 var(--text-4xl)/var(--leading-4xl) var(--font-sans); letter-spacing:-0.01em; }
+.t-h2            { font: 700 var(--text-3xl)/var(--leading-3xl) var(--font-sans); letter-spacing:-0.01em; }
+.t-h3            { font: 600 var(--text-2xl)/var(--leading-2xl) var(--font-sans); }
+.t-h4            { font: 600 var(--text-xl)/var(--leading-xl)   var(--font-sans); }
+.t-body          { font: 400 var(--text-base)/var(--leading-base) var(--font-sans); }
+.t-body-lg       { font: 400 var(--text-lg)/var(--leading-lg)   var(--font-sans); }
+.t-sm            { font: 400 var(--text-sm)/var(--leading-sm)   var(--font-sans); }
+.t-xs            { font: 400 var(--text-xs)/var(--leading-xs)   var(--font-sans); }
+.t-mono          { font-family: var(--font-mono); }
+.t-label         { font: 600 var(--text-sm)/var(--leading-sm)   var(--font-sans); letter-spacing: 0.02em; }
+
+/* MD3 equivalents — for Android specimens */
+.md-display-lg   { font: 400 var(--md-display-lg)/var(--md-display-lg-lh) var(--font-android); letter-spacing: var(--md-display-lg-tr); }
+.md-display-md   { font: 400 var(--md-display-md)/var(--md-display-md-lh) var(--font-android); }
+.md-display-sm   { font: 400 var(--md-display-sm)/var(--md-display-sm-lh) var(--font-android); }
+.md-headline-lg  { font: 600 var(--md-headline-lg)/var(--md-headline-lg-lh) var(--font-android); }
+.md-headline-md  { font: 600 var(--md-headline-md)/var(--md-headline-md-lh) var(--font-android); }
+.md-headline-sm  { font: 600 var(--md-headline-sm)/var(--md-headline-sm-lh) var(--font-android); }
+.md-title-lg     { font: 600 var(--md-title-lg)/var(--md-title-lg-lh) var(--font-android); }
+.md-title-md     { font: 600 var(--md-title-md)/var(--md-title-md-lh) var(--font-android); letter-spacing: 0.15px; }
+.md-title-sm     { font: 500 var(--md-title-sm)/var(--md-title-sm-lh) var(--font-android); letter-spacing: 0.1px; }
+.md-body-lg      { font: 400 var(--md-body-lg)/var(--md-body-lg-lh) var(--font-android); letter-spacing: 0.5px; }
+.md-body-md      { font: 400 var(--md-body-md)/var(--md-body-md-lh) var(--font-android); letter-spacing: 0.25px; }
+.md-body-sm      { font: 400 var(--md-body-sm)/var(--md-body-sm-lh) var(--font-android); letter-spacing: 0.4px; }
+.md-label-lg     { font: 500 var(--md-label-lg)/var(--md-label-lg-lh) var(--font-android); letter-spacing: 0.1px; }
+.md-label-md     { font: 500 var(--md-label-md)/var(--md-label-md-lh) var(--font-android); letter-spacing: 0.5px; }
+.md-label-sm     { font: 500 var(--md-label-sm)/var(--md-label-sm-lh) var(--font-android); letter-spacing: 0.5px; }
+
+
+/* ---------- PRIMITIVE CLASSES (glass) --------------------------------------
+   The web product is defined by these three primitives: .glass, .glass-strong,
+   and .glass-subtle. Use them directly or compose.
+   ------------------------------------------------------------------------- */
+.glass {
+  background: var(--web-glass);
+  border: 1px solid var(--web-glass-border);
+  backdrop-filter: var(--web-blur-md);
+  -webkit-backdrop-filter: var(--web-blur-md);
+  border-radius: var(--web-radius-xl);
+  color: var(--web-fg);
+}
+.glass-strong {
+  background: var(--web-glass-strong);
+  border: 1px solid var(--web-glass-border);
+  backdrop-filter: var(--web-blur-lg);
+  -webkit-backdrop-filter: var(--web-blur-lg);
+  border-radius: var(--web-radius-2xl);
+  color: var(--web-fg);
+}
+.glass-subtle {
+  background: var(--web-glass-subtle);
+  border: 1px solid var(--web-glass-border-2);
+  backdrop-filter: var(--web-blur-md);
+  -webkit-backdrop-filter: var(--web-blur-md);
+  border-radius: var(--web-radius-lg);
+  color: var(--web-fg);
+}
+
+/* The page wash — drop this on <body> to get the signature indigo gradient */
+.page-wash {
+  background: var(--web-bg-wash);
+  min-height: 100vh;
+  color: var(--web-fg);
+  font-family: var(--font-sans);
+}

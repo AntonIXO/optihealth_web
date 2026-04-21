@@ -1,0 +1,29 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="_base.css"><title>Buttons — Web</title>
+<style>
+  .btn { display:inline-flex; align-items:center; gap:8px; padding:10px 16px; border-radius:12px; font:600 14px/1 var(--font-sans); border:1px solid transparent; cursor:pointer; transition:all .15s; }
+  .btn:active { transform: scale(.98); }
+  .btn-primary { background:#fff; color:#0a0a0a; box-shadow:0 1px 2px rgba(0,0,0,0.05); }
+  .btn-primary:hover { background:rgba(255,255,255,0.92); }
+  .btn-glass { background:rgba(255,255,255,0.10); color:#fff; border-color:rgba(255,255,255,0.20); backdrop-filter:blur(12px); }
+  .btn-glass:hover { background:rgba(255,255,255,0.15); }
+  .btn-ghost { background:transparent; color:#fff; border-color:rgba(255,255,255,0.20); }
+  .btn-ghost:hover { background:rgba(255,255,255,0.08); }
+  .btn-demo { background:rgba(254,240,138,0.95); color:#713f12; border-color:rgba(254,240,138,0.60); }
+  .btn-sm { padding:6px 12px; font-size:12px; border-radius:10px; }
+</style>
+</head><body>
+<div class="card-glass">
+  <div class="label" style="color:rgba(255,255,255,0.7); margin-bottom:12px;">Buttons · liquid glass</div>
+  <div class="row" style="margin-bottom:10px;">
+    <button class="btn btn-primary">Sign in</button>
+    <button class="btn btn-glass">Login / Sign up</button>
+    <button class="btn btn-ghost">To Dashboard</button>
+    <button class="btn btn-demo">Demo login</button>
+  </div>
+  <div class="row">
+    <button class="btn btn-glass btn-sm">Log Data</button>
+    <button class="btn btn-glass btn-sm">+ Add Product</button>
+    <button class="btn btn-glass btn-sm" style="padding:6px;">×</button>
+  </div>
+</div>
+</body></html>

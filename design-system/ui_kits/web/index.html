@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>optiHealth — Web UI Kit</title>
+  <link rel="stylesheet" href="../../colors_and_type.css"/>
+  <style>
+    html, body { margin: 0; padding: 0; }
+    body { font-family: Geist, ui-sans-serif, system-ui, -apple-system, sans-serif; background: #0b0f2a; }
+    * { box-sizing: border-box; }
+    input { color-scheme: dark; }
+    @keyframes popIn { 0% { opacity: 0; transform: scale(0.96) translateY(10px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
+    @keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="GlassPrimitives.jsx"></script>
+  <script type="text/babel" src="Icons.jsx"></script>
+  <script type="text/babel" src="Button.jsx"></script>
+  <script type="text/babel" src="AuthModal.jsx"></script>
+  <script type="text/babel" src="Landing.jsx"></script>
+  <script type="text/babel" src="Dashboard.jsx"></script>
+
+  <script type="text/babel">
+    const App = () => {
+      const [view, setView] = React.useState(localStorage.getItem('oh.web.view') || 'landing');
+      const [authOpen, setAuthOpen] = React.useState(false);
+      React.useEffect(() => { localStorage.setItem('oh.web.view', view); }, [view]);
+      return (
+        <PageWash>
+          {view === 'landing' && <Landing onAuth={() => setAuthOpen(true)}/>}
+          {view === 'dashboard' && (<>
+            <DashboardNav onLogout={() => setView('landing')}/>
+            <Dashboard/>
+          </>)}
+          <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} onSuccess={() => { setAuthOpen(false); setView('dashboard'); }}/>
+        </PageWash>
+      );
+    };
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>

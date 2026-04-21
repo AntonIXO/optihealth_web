@@ -1,0 +1,20 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="_base.css"><title>Glass elevation</title></head><body>
+<div class="card-glass">
+  <div class="label" style="color:rgba(255,255,255,0.7); margin-bottom:12px;">Blur + border + shadow — 3 steps of glass elevation</div>
+  <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:14px;">
+    <div style="padding:14px; border-radius:12px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.10); backdrop-filter:blur(6px); box-shadow:0 1px 2px rgba(0,0,0,0.05); font-size:12px;">
+      <div style="font-weight:600; margin-bottom:4px;">subtle</div>
+      white/5 · blur-sm · border/10 · shadow-sm
+    </div>
+    <div style="padding:14px; border-radius:16px; background:rgba(255,255,255,0.10); border:1px solid rgba(255,255,255,0.20); backdrop-filter:blur(12px); box-shadow:0 8px 24px rgba(0,0,0,0.2); font-size:12px;">
+      <div style="font-weight:600; margin-bottom:4px;">card</div>
+      white/10 · blur-md · border/20 · shadow-md
+    </div>
+    <div style="padding:14px; border-radius:24px; background:rgba(255,255,255,0.20); border:1px solid rgba(255,255,255,0.20); backdrop-filter:blur(24px); box-shadow:0 25px 50px rgba(0,0,0,0.45); font-size:12px; position:relative; overflow:hidden;">
+      <div style="position:absolute; inset-inline:0; top:0; height:1px; background:linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);"></div>
+      <div style="font-weight:600; margin-bottom:4px;">modal</div>
+      white/20 · blur-xl · top-edge highlight
+    </div>
+  </div>
+</div>
+</body></html>

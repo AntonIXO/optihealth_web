@@ -1,0 +1,15 @@
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Roboto:wght@400;500;600;700&family=Roboto+Flex:opsz,wght@8..144,400;8..144,500;8..144,600;8..144,700&display=swap");
+@import url("../colors_and_type.css");
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; }
+body { font-family: var(--font-sans); background: #fff; color: #111; }
+.card { width: 700px; padding: 24px; }
+.card-glass {
+  width: 700px; padding: 24px; color: var(--web-fg);
+  background: var(--web-bg-wash);
+  font-family: var(--font-sans);
+}
+.row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.grid { display: grid; gap: 12px; }
+.label { font-size: 11px; color: #666; letter-spacing: 0.02em; text-transform: uppercase; font-weight: 600; }
+.mono { font-family: var(--font-mono); font-size: 11px; color: #888; }
