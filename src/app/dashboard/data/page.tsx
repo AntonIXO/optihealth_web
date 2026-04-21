@@ -19,7 +19,7 @@ import { DataLogger } from "@/components/dashboard/data-logger";
 /* Lines 12-16 omitted */
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { createClient } from "@/utils/supabase/client";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
 interface MetricDefinition {
@@ -69,6 +69,39 @@ export default function DataPage() {
   const [viewportMin, setViewportMin] = useState<number | undefined>(undefined);
   const [viewportMax, setViewportMax] = useState<number | undefined>(undefined);
   const viewportDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const chartStats = useMemo(() => {
+    const stats = {
+      min1: 0, max1: 0,
+      min2: 0, max2: 0
+    };
+
+    if (chartData.length > 0) {
+      let min = chartData[0].value;
+      let max = chartData[0].value;
+      for (let i = 1; i < chartData.length; i++) {
+        const v = chartData[i].value;
+        if (v < min) min = v;
+        if (v > max) max = v;
+      }
+      stats.min1 = min;
+      stats.max1 = max;
+    }
+
+    if (chartData2.length > 0) {
+      let min = chartData2[0].value;
+      let max = chartData2[0].value;
+      for (let i = 1; i < chartData2.length; i++) {
+        const v = chartData2[i].value;
+        if (v < min) min = v;
+        if (v > max) max = v;
+      }
+      stats.min2 = min;
+      stats.max2 = max;
+    }
+
+    return stats;
+  }, [chartData, chartData2]);
 
   const metric = searchParams.get('metric') || 'hr_resting';
   const metric2 = searchParams.get('metric2') || '';
@@ -291,9 +324,13 @@ export default function DataPage() {
           setTableData(chartFormat.slice().reverse());
 
           if (chartFormat.length > 0) {
-            const timestamps = chartFormat.map(d => new Date(d.bucket).getTime());
-            const min = Math.min(...timestamps);
-            const max = Math.max(...timestamps);
+            let min = new Date(chartFormat[0].bucket).getTime();
+            let max = min;
+            for (let i = 1; i < chartFormat.length; i++) {
+              const t = new Date(chartFormat[i].bucket).getTime();
+              if (t < min) min = t;
+              if (t > max) max = t;
+            }
             setMinTime(min);
             setMaxTime(max);
           } else {
@@ -548,8 +585,15 @@ export default function DataPage() {
   // Normalize data to 0-100 range for visual comparison
   const normalizeData = (data: number[]) => {
     if (data.length === 0) return [];
-    const min = Math.min(...data);
-    const max = Math.max(...data);
+
+    let min = data[0];
+    let max = data[0];
+    for (let i = 1; i < data.length; i++) {
+      const val = data[i];
+      if (val < min) min = val;
+      if (val > max) max = val;
+    }
+
     const range = max - min;
     
     if (range === 0) return data.map(() => 50); // All values are the same, center at 50
@@ -848,7 +892,7 @@ export default function DataPage() {
               </p>
               <p className="text-white/70 text-xs">
                 Both metrics are scaled to 0-100 range for visual comparison. This preserves the patterns and trends while making different scales comparable. 
-                Original values: <span className="font-mono">{getMetricDisplayName(metric)}</span> (min: {Math.min(...chartData.map(d => d.value)).toFixed(1)}, max: {Math.max(...chartData.map(d => d.value)).toFixed(1)}) • <span className="font-mono">{getMetricDisplayName(metric2)}</span> (min: {Math.min(...chartData2.map(d => d.value)).toFixed(1)}, max: {Math.max(...chartData2.map(d => d.value)).toFixed(1)})
+                Original values: <span className="font-mono">{getMetricDisplayName(metric)}</span> (min: {chartStats.min1.toFixed(1)}, max: {chartStats.max1.toFixed(1)}) • <span className="font-mono">{getMetricDisplayName(metric2)}</span> (min: {chartStats.min2.toFixed(1)}, max: {chartStats.max2.toFixed(1)})
               </p>
             </div>
           </div>
