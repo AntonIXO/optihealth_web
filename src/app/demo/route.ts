@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
+import { getOriginFromRequest } from "@/lib/origin";
 
 const DEMO_EMAIL = "aivanovmailru@gmail.com";
 const DEMO_PASSWORD = "123123q~E";
 
 export async function GET(request: Request) {
   const supabase = await createClient();
+  const origin = getOriginFromRequest(request);
 
   const { error } = await supabase.auth.signInWithPassword({
     email: DEMO_EMAIL,
@@ -13,11 +15,8 @@ export async function GET(request: Request) {
   });
 
   if (error) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("error", "demo-login-failed");
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(new URL("/login", origin));
   }
 
-  const dashboardUrl = new URL("/dashboard", request.url);
-  return NextResponse.redirect(dashboardUrl);
+  return NextResponse.redirect(new URL("/dashboard", origin));
 }
