@@ -161,7 +161,7 @@ export function QuickLogModal({ open, onOpenChange, product, onLogged }: QuickLo
           <Button onClick={handleLog} disabled={isSubmitting} className="flex-1">
             {isSubmitting ? "Logging..." : "Log Now"}
           </Button>
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>
+          <Button variant="glass" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
         </div>
