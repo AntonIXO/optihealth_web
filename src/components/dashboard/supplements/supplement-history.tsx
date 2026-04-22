@@ -180,10 +180,10 @@ export function SupplementHistory() {
       </div>
 
       <div className="flex justify-between mt-4">
-        <Button variant="secondary" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+        <Button variant="glass" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
           Previous
         </Button>
-        <Button variant="secondary" disabled={!hasMore} onClick={() => setPage((p) => p + 1)}>
+        <Button variant="glass" disabled={!hasMore} onClick={() => setPage((p) => p + 1)}>
           Load More
         </Button>
       </div>

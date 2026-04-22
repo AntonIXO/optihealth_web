@@ -64,7 +64,7 @@ export function ComponentRequestModal({
             <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Links or context" />
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="glass" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading || !submittedName}>{loading ? "Submitting…" : "Submit"}</Button>
