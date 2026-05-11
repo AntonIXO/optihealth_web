@@ -313,7 +313,7 @@ export function AddProductWizard({ open, onOpenChange, onSaved }: AddProductWiza
                     <div className="text-sm text-muted-foreground">
                       No vendors found matching "{vendorQuery}"
                     </div>
-                    <Button onClick={handleCreateVendor} variant="secondary" className="w-full">
+                    <Button onClick={handleCreateVendor} variant="glass" className="w-full">
                       Create New Vendor: "{vendorQuery}"
                     </Button>
                   </div>
@@ -421,7 +421,7 @@ export function AddProductWizard({ open, onOpenChange, onSaved }: AddProductWiza
         {/* Navigation Buttons */}
         <div className="flex justify-between pt-4 border-t">
           <Button
-            variant="secondary"
+            variant="glass"
             onClick={() => setStep((s) => Math.max(1, s - 1) as WizardStep)}
             disabled={step === 1}
           >

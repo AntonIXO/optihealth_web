@@ -138,7 +138,7 @@ export default function FeaturesShowcasePage() {
               Everything you need to optimize your health
             </h2>
             <p className="mt-6 text-lg leading-8 text-white/70">
-              From data collection to AI-powered insights, OptiHealth provides a comprehensive
+              From data collection to AI-powered insights, optiHealth provides a comprehensive
               platform for health optimization.
             </p>
           </div>

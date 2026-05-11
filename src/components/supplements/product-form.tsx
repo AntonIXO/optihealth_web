@@ -273,13 +273,13 @@ export function ProductForm({
               />
             ))}
           </div>
-          <Button type="button" variant="secondary" onClick={addRow}>
+          <Button type="button" variant="glass" onClick={addRow}>
             <Plus className="h-4 w-4 mr-1" /> Add Component
           </Button>
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button type="button" variant="glass" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSave} disabled={!canSave || saving}>{saving ? "Saving…" : "Save Product"}</Button>
         </div>
 
